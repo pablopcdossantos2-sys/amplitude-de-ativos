@@ -1,39 +1,78 @@
 # Sino do Mercado
 
-Webapp estático para visualizar **distribuições (“curvas de sino”)** de WINFUT, WDOFUT, DI1FUT e EWZ em diferentes janelas e timeframes.
+Webapp estático para estudar, por meio de **histogramas e curva de sino**, a distribuição histórica das **amplitudes (Máxima − Mínima)** de WINFUT, WDOFUT, DI1FUT e EWZ.
 
 ## Acesse a versão online
 
 GitHub Pages: https://pablopcdossantos2-sys.github.io/variacoes-graficos/
 
-## O que o app faz
+## Objetivo da ferramenta
 
-- importa CSVs OHLCV exportados do TradingView ou de outra fonte compatível;
-- mantém um conjunto de dados separado para WINFUT, WDOFUT, DI1FUT e EWZ durante a sessão;
-- permite analisar 20, 60, 120, 252 observações, todo o histórico ou um intervalo de datas;
-- agrega candles para 5, 15, 30, 60 minutos ou diário, quando o arquivo possui granularidade suficiente;
-- calcula retorno fechamento-fechamento, retorno logarítmico, retorno abertura-fechamento, amplitude percentual e variação absoluta;
-- desenha histograma e curva normal ajustada;
-- mostra média, desvio-padrão, mediana, assimetria, curtose, percentis e proporção de observações positivas/negativas;
-- calcula a frequência histórica de um limiar e a probabilidade equivalente na normal ajustada;
-- exporta o recorte usado na análise para CSV e o gráfico para PNG.
+A pergunta central do projeto é:
 
-## Como usar
+> **Qual é a distribuição das amplitudes que um ativo costuma percorrer dentro de uma determinada faixa de tempo?**
 
-1. Abra o Webapp.
-2. Escolha WINFUT, WDOFUT, DI1FUT ou EWZ.
-3. Importe um CSV OHLCV.
-4. Selecione a janela de análise ou um intervalo personalizado.
-5. Escolha o timeframe e a métrica.
-6. Analise o histograma, a curva normal e as estatísticas calculadas.
+A amplitude de uma observação é calculada como:
 
-O parser procura colunas equivalentes a `time/date`, `open`, `high`, `low`, `close` e, opcionalmente, `volume`.
+`Amplitude = maior High − menor Low`
 
-> A demonstração inicial usa dados **sintéticos**, apenas para apresentar o funcionamento da interface.
+O Webapp oferece dois modos de análise.
+
+### 1. Faixa horária por pregão
+
+Este é o modo principal.
+
+Exemplo: selecionar **09:00–10:00** e analisar os últimos **60 pregões**.
+
+Para cada pregão, o sistema:
+
+1. seleciona todos os candles compreendidos entre 09:00 e 10:00;
+2. encontra a maior máxima da faixa;
+3. encontra a menor mínima da faixa;
+4. calcula `maior máxima − menor mínima`;
+5. usa esse resultado como uma observação no histograma.
+
+Assim, se houver 60 pregões válidos, haverá até 60 amplitudes compondo a distribuição.
+
+### 2. Cada candle / timeframe
+
+Neste modo, cada candle é uma observação independente.
+
+É possível estudar as amplitudes dos candles no timeframe original do CSV ou reagrupar dados suficientemente granulares em 2, 5, 10, 15, 30 e 60 minutos, além do diário.
+
+## Formas de medir a amplitude
+
+### Amplitude absoluta
+
+`High − Low`
+
+Útil para responder perguntas como “quantos pontos o WIN costuma percorrer nesta faixa?”.
+
+### Amplitude percentual
+
+`((High − Low) / Open) × 100`
+
+Útil para comparar períodos ou ativos em escalas de preço diferentes.
+
+## Estatísticas apresentadas
+
+O Webapp calcula média, mediana, desvio-padrão, assimetria, curtose excedente, percentis 5%, 25%, 75% e 95%, menor e maior amplitude, tamanho da amostra e frequência histórica acima ou abaixo de um limiar escolhido.
+
+A curva normal ajustada é mostrada apenas como **referência visual**. Amplitudes são não negativas e não precisam seguir distribuição normal; o histograma dos dados observados é a informação principal.
+
+## Dados
+
+O Webapp importa CSVs OHLCV exportados do TradingView ou de outra fonte compatível. O parser procura colunas equivalentes a `time/date`, `open`, `high`, `low`, `close` e `volume` (opcional). Os arquivos são processados no próprio navegador.
+
+> A demonstração incluída no Webapp usa dados sintéticos intradiários apenas para explicar a interface.
+
+## Granularidade do CSV
+
+Para uma análise correta, o arquivo precisa ter resolução suficiente. Por exemplo, para calcular com precisão uma faixa de **09:00–09:15**, use candles menores ou iguais a essa faixa, idealmente de 1 ou 5 minutos. O Webapp consegue agregar candles para períodos maiores, mas não consegue reconstruir detalhes inexistentes no arquivo original.
 
 ## Executar localmente
 
-Como a aplicação está consolidada em um único `index.html`, basta abrir esse arquivo em um navegador moderno. O Plotly é carregado por CDN, portanto a geração dos gráficos requer acesso à internet.
+A aplicação está consolidada em um único `index.html`. Basta abrir o arquivo em um navegador moderno. O Plotly é carregado por CDN.
 
 Também é possível iniciar um servidor local:
 
@@ -45,26 +84,12 @@ Depois abra `http://localhost:8000`.
 
 ## GitHub Pages
 
-O repositório inclui `.github/workflows/pages.yml`. Depois que o Pages for habilitado uma única vez no repositório, cada atualização da branch `main` será publicada automaticamente.
-
-### Ativação inicial
-
-No GitHub:
-
-1. abra **Settings** do repositório;
-2. entre em **Pages**;
-3. em **Build and deployment**, defina **Source** como **GitHub Actions**;
-4. salve a configuração;
-5. abra **Actions → Deploy GitHub Pages** e execute novamente o workflow, ou faça um novo commit na `main`.
-
-Depois dessa ativação inicial, a publicação passa a ser automática.
-
-Endereço esperado: https://pablopcdossantos2-sys.github.io/variacoes-graficos/
+O repositório inclui `.github/workflows/pages.yml`. Em **Settings → Pages**, configure **Source** como **GitHub Actions**. Depois disso, commits na branch `main` publicam automaticamente a nova versão.
 
 ## Dados da B3
 
-O projeto não automatiza coleta do site da B3. Para WIN/WDO/DI, use uma fonte de dados que você tenha direito de utilizar e importe o CSV resultante. A camada de análise é independente da origem dos dados.
+O projeto não automatiza coleta do site da B3. Para WIN, WDO e DI, utilize uma fonte de dados que você tenha direito de usar e importe o CSV correspondente.
 
 ## Aviso
 
-Ferramenta educacional. Distribuições históricas e curvas normais não garantem resultados futuros e não constituem recomendação de investimento.
+Ferramenta educacional para análise histórica. Os resultados não constituem recomendação de investimento e não garantem comportamento futuro.
