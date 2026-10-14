@@ -45,7 +45,21 @@ Depois abra `http://localhost:8000`.
 
 ## GitHub Pages
 
-O repositório inclui `.github/workflows/pages.yml`. A cada atualização da branch `main`, o workflow prepara e publica a raiz do projeto no GitHub Pages.
+O repositório inclui `.github/workflows/pages.yml`. Depois que o Pages for habilitado uma única vez no repositório, cada atualização da branch `main` será publicada automaticamente.
+
+### Ativação inicial
+
+No GitHub:
+
+1. abra **Settings** do repositório;
+2. entre em **Pages**;
+3. em **Build and deployment**, defina **Source** como **GitHub Actions**;
+4. salve a configuração;
+5. abra **Actions → Deploy GitHub Pages** e execute novamente o workflow, ou faça um novo commit na `main`.
+
+Depois dessa ativação inicial, a publicação passa a ser automática.
+
+Endereço esperado: https://pablopcdossantos2-sys.github.io/variacoes-graficos/
 
 ## Dados da B3
 
