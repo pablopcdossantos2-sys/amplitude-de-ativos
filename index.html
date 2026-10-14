@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Webapp educacional para análise de distribuições de retornos de WINFUT, WDOFUT, DI1FUT e EWZ." />
+  <meta name="description" content="Webapp para analisar a distribuição histórica das amplitudes High–Low de WINFUT, WDOFUT, DI1FUT e EWZ em faixas horárias e timeframes configuráveis." />
   <title>Sino do Mercado — WIN, WDO, DI e EWZ</title>
   <script src="https://cdn.plot.ly/plotly-3.1.0.min.js" charset="utf-8"></script>
   <style>
@@ -218,9 +218,9 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
   <div class="app-shell">
     <header class="topbar">
       <div>
-        <div class="eyebrow">Distribuição de retornos • Curva de sino</div>
+        <div class="eyebrow">Distribuição de amplitudes • Curva de sino</div>
         <h1>Sino do Mercado</h1>
-        <p class="subtitle">Compare como WINFUT, WDOFUT, DI1FUT e EWZ se distribuíram em diferentes janelas e timeframes.</p>
+        <p class="subtitle">Descubra como a amplitude <strong>Máxima − Mínima</strong> de WINFUT, WDOFUT, DI1FUT e EWZ se distribui em uma faixa de tempo escolhida.</p>
       </div>
       <div class="top-actions">
         <button id="themeBtn" class="btn ghost" type="button" aria-label="Alternar tema">◐ Tema</button>
@@ -288,28 +288,48 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
         </section>
 
         <section class="control-section">
-          <h2>4. Cálculo</h2>
+          <h2>4. Faixa de tempo e amplitude</h2>
           <label class="field">
-            <span>Timeframe</span>
+            <span>Como formar cada observação</span>
+            <select id="analysisModeSelect">
+              <option value="session_range">Faixa horária por pregão</option>
+              <option value="candle_range">Cada candle / timeframe</option>
+            </select>
+          </label>
+
+          <div id="sessionWindowFields" class="field-grid two">
+            <label>
+              <span>Início da faixa</span>
+              <input id="sessionStartTime" type="time" value="09:00" step="60" />
+            </label>
+            <label>
+              <span>Fim da faixa</span>
+              <input id="sessionEndTime" type="time" value="10:00" step="60" />
+            </label>
+          </div>
+
+          <label id="timeframeField" class="field hidden">
+            <span>Timeframe de cada candle</span>
             <select id="timeframeSelect">
               <option value="raw">Original do arquivo</option>
+              <option value="2m">2 minutos</option>
               <option value="5m">5 minutos</option>
+              <option value="10m">10 minutos</option>
               <option value="15m">15 minutos</option>
               <option value="30m">30 minutos</option>
               <option value="60m">60 minutos</option>
               <option value="1d">Diário</option>
             </select>
           </label>
+
           <label class="field">
-            <span>Métrica da distribuição</span>
+            <span>Como medir a amplitude</span>
             <select id="metricSelect">
-              <option value="cc_return">Retorno fechamento → fechamento (%)</option>
-              <option value="log_return">Retorno logarítmico (%)</option>
-              <option value="oc_return">Retorno abertura → fechamento (%)</option>
-              <option value="range_pct">Amplitude High–Low (%)</option>
-              <option value="abs_change">Variação absoluta do fechamento</option>
+              <option value="range_abs">Amplitude absoluta (High − Low)</option>
+              <option value="range_pct">Amplitude percentual ((High − Low) / Open)</option>
             </select>
           </label>
+
           <div class="field-grid two">
             <label>
               <span>Nº de classes</span>
@@ -326,12 +346,13 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
           </div>
           <label class="check-row">
             <input id="normalCurveToggle" type="checkbox" checked />
-            <span>Exibir curva normal ajustada</span>
+            <span>Exibir curva normal ajustada como referência</span>
           </label>
           <label class="check-row">
             <input id="meanLinesToggle" type="checkbox" checked />
             <span>Exibir média e ±1/±2 desvios</span>
           </label>
+          <p class="hint">No modo “faixa horária por pregão”, cada pregão gera uma amplitude: maior High menos menor Low dentro do intervalo escolhido.</p>
         </section>
       </aside>
 
@@ -342,8 +363,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
           <div class="hero-head">
             <div>
               <span class="eyebrow">Distribuição observada</span>
-              <h2 id="chartTitle">WINFUT — retorno fechamento → fechamento</h2>
-              <p id="chartSubtitle">Últimas 60 observações do timeframe original</p>
+              <h2 id="chartTitle">WINFUT — amplitude 09:00–10:00</h2>
+              <p id="chartSubtitle">Últimos 60 pregões com dados na faixa selecionada</p>
             </div>
             <div class="chart-actions">
               <button id="downloadPngBtn" class="btn secondary" type="button">PNG</button>
@@ -352,7 +373,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
           </div>
           <div id="chart" class="chart" aria-label="Histograma e curva normal"></div>
           <div class="chart-footnote">
-            <span id="normalityNote">A curva normal é uma referência teórica, não uma previsão.</span>
+            <span id="normalityNote">O histograma é o dado principal; a curva normal é apenas uma referência teórica.</span>
             <span id="rangeNote">—</span>
           </div>
         </section>
@@ -370,7 +391,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
           <article class="card panel">
             <div class="panel-head">
               <div>
-                <span class="eyebrow">Caudas e direção</span>
+                <span class="eyebrow">Faixas de amplitude</span>
                 <h3>Leitura da distribuição</h3>
               </div>
             </div>
@@ -379,8 +400,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
               <div><span>Percentil 25%</span><strong id="p25">—</strong></div>
               <div><span>Percentil 75%</span><strong id="p75">—</strong></div>
               <div><span>Percentil 95%</span><strong id="p95">—</strong></div>
-              <div><span>Observações positivas</span><strong id="positivePct">—</strong></div>
-              <div><span>Observações negativas</span><strong id="negativePct">—</strong></div>
+              <div><span>Menor amplitude</span><strong id="minAmp">—</strong></div>
+              <div><span>Maior amplitude</span><strong id="maxAmp">—</strong></div>
             </div>
           </article>
 
@@ -388,20 +409,19 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
             <div class="panel-head">
               <div>
                 <span class="eyebrow">Probabilidade histórica</span>
-                <h3>Teste um limiar</h3>
+                <h3>Probabilidade de uma amplitude</h3>
               </div>
             </div>
             <div class="prob-controls">
               <label class="field">
-                <span>Limiar</span>
+                <span>Amplitude-limite</span>
                 <input id="thresholdInput" type="number" step="0.01" value="1" />
               </label>
               <label class="field">
                 <span>Condição</span>
                 <select id="thresholdDirection">
-                  <option value="gte">valor ≥ limiar</option>
-                  <option value="lte">valor ≤ limiar</option>
-                  <option value="abs">|valor| ≥ limiar</option>
+                  <option value="gte">amplitude ≥ limite</option>
+                  <option value="lte">amplitude ≤ limite</option>
                 </select>
               </label>
             </div>
@@ -430,7 +450,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     </main>
 
     <footer>
-      Ferramenta educacional. Distribuições históricas não garantem comportamento futuro e não constituem recomendação de investimento.
+      Ferramenta educacional para estudo de amplitudes históricas. Padrões passados não garantem comportamento futuro e não constituem recomendação de investimento.
     </footer>
   </div>
 
@@ -439,23 +459,25 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
       <div class="dialog-head">
         <div>
           <span class="eyebrow">Guia rápido</span>
-          <h2>Como alimentar o Sino do Mercado</h2>
+          <h2>Como analisar amplitudes no Sino do Mercado</h2>
         </div>
         <button class="icon-btn" value="close" aria-label="Fechar">×</button>
       </div>
       <div class="dialog-body">
         <h3>TradingView</h3>
         <ol>
-          <li>Abra o ativo e o timeframe desejado no Supergráfico.</li>
+          <li>Abra o ativo no Supergráfico e use um timeframe igual ou menor que a menor faixa que pretende analisar.</li>
           <li>Carregue no gráfico todo o histórico que deseja analisar.</li>
           <li>Use <strong>Baixar os dados do gráfico…</strong> e salve o CSV.</li>
           <li>Neste Webapp, selecione WINFUT, WDOFUT, DI1FUT ou EWZ e importe o arquivo correspondente.</li>
         </ol>
         <p>O parser reconhece, entre outros, campos como <code>time/date</code>, <code>open</code>, <code>high</code>, <code>low</code>, <code>close</code> e <code>volume</code>. Colunas extras são ignoradas.</p>
-        <h3>Timeframes</h3>
-        <p>Se você importar candles de 1 minuto, o app consegue agregá-los para 5, 15, 30, 60 minutos e diário. Ele não consegue “inventar” granularidade menor do que a presente no arquivo.</p>
+        <h3>Dois modos de análise</h3>
+        <p><strong>Faixa horária por pregão:</strong> escolha, por exemplo, 09:00–10:00. Em cada pregão o app encontra a maior máxima e a menor mínima dentro da faixa; a diferença entre elas vira uma observação do gráfico de sino.</p>
+        <p><strong>Cada candle/timeframe:</strong> cada candle agregado vira uma observação, permitindo estudar a distribuição das amplitudes de 2, 5, 10, 15, 30 ou 60 minutos, além do diário.</p>
+        <p>O app não consegue “inventar” granularidade menor que a presente no CSV. Para estudar 5 minutos com precisão, importe dados de 5 minutos ou menores.</p>
         <h3>O que é a curva de sino?</h3>
-        <p>O histograma mostra a distribuição realmente observada. A linha normal é ajustada à média e ao desvio-padrão da amostra, servindo apenas como referência para enxergar assimetria, caudas e afastamentos da normalidade.</p>
+        <p>O histograma mostra a distribuição das amplitudes realmente observadas. A linha normal é ajustada à média e ao desvio-padrão da amostra apenas como referência visual; amplitudes são não negativas e não precisam seguir uma distribuição normal.</p>
         <div class="callout">A demonstração inicial usa dados sintéticos apenas para mostrar o funcionamento da interface. Importe dados reais antes de interpretar resultados.</div>
       </div>
       <div class="dialog-actions">
@@ -482,7 +504,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     datasets: {},
     sources: {},
     discarded: {},
-    lastRender: { bars: [], values: [], metric: 'cc_return' },
+    lastRender: { bars: [], values: [], metric: 'range_abs' },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -506,30 +528,37 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
 
-  function generateDemo(asset, count = 520) {
+  function generateDemo(asset, sessions = 180) {
     const seed = [...asset].reduce((a, c) => a + c.charCodeAt(0), 17);
     const rand = mulberry32(seed);
     let price = assetMeta[asset].demoStart;
     const rows = [];
-    const start = new Date('2024-10-01T13:00:00Z');
-    let added = 0;
-    let i = 0;
-    while (added < count) {
-      const d = new Date(start.getTime() + i * 86400000);
-      i += 1;
-      const day = d.getUTCDay();
-      if (day === 0 || day === 6) continue;
-      const shockMix = rand() < 0.035 ? 2.6 : 1;
-      const ret = gaussian(rand) * assetMeta[asset].demoVol * shockMix / 100 + (rand() - .5) * .0005;
-      const open = price * (1 + gaussian(rand) * assetMeta[asset].demoVol * .17 / 100);
-      const close = Math.max(0.0001, open * (1 + ret));
-      const swing = Math.abs(gaussian(rand)) * assetMeta[asset].demoVol * .45 / 100;
-      const high = Math.max(open, close) * (1 + swing);
-      const low = Math.min(open, close) * (1 - swing);
-      const volume = Math.round(100000 + rand() * 900000);
-      rows.push({ time: d.getTime(), open, high, low, close, volume });
-      price = close;
-      added += 1;
+    const start = new Date(2025, 0, 2, 9, 0, 0, 0);
+    let completed = 0;
+    let dayOffset = 0;
+
+    while (completed < sessions) {
+      const day = new Date(start);
+      day.setDate(start.getDate() + dayOffset++);
+      const dow = day.getDay();
+      if (dow === 0 || dow === 6) continue;
+
+      const sessionShock = rand() < 0.05 ? 1.9 : 1;
+      for (let bar = 0; bar < 48; bar++) {
+        const t = new Date(day);
+        t.setMinutes(day.getMinutes() + bar * 5);
+        const intradayVol = assetMeta[asset].demoVol * sessionShock / Math.sqrt(48);
+        const ret = gaussian(rand) * intradayVol / 100;
+        const open = price;
+        const close = Math.max(0.0001, open * (1 + ret));
+        const extra = Math.abs(gaussian(rand)) * intradayVol * .55 / 100;
+        const high = Math.max(open, close) * (1 + extra);
+        const low = Math.min(open, close) * Math.max(0.0001, (1 - extra));
+        const volume = Math.round(5000 + rand() * 95000);
+        rows.push({ time: t.getTime(), open, high, low, close, volume });
+        price = close;
+      }
+      completed += 1;
     }
     return rows;
   }
@@ -661,7 +690,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
 
   function resample(rows, timeframe) {
     if (timeframe === 'raw') return rows.slice();
-    const msMap = { '5m': 300000, '15m': 900000, '30m': 1800000, '60m': 3600000 };
+    const msMap = { '2m': 120000, '5m': 300000, '10m': 600000, '15m': 900000, '30m': 1800000, '60m': 3600000 };
     const buckets = new Map();
     for (const r of rows) {
       let key;
@@ -694,17 +723,63 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     return rows.slice(-Number(state.lookback));
   }
 
+  function minutesOfDay(t) {
+    const d = new Date(t);
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  function parseHHMM(value, fallback) {
+    const m = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return fallback;
+    return Math.max(0, Math.min(1439, Number(m[1]) * 60 + Number(m[2])));
+  }
+
+  function localDateKey(t, shiftDays = 0) {
+    const d = new Date(t);
+    if (shiftDays) d.setDate(d.getDate() + shiftDays);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function buildSessionRanges(rows, startValue, endValue) {
+    const start = parseHHMM(startValue, 9 * 60);
+    const end = parseHHMM(endValue, 10 * 60);
+    const overnight = end <= start;
+    const buckets = new Map();
+
+    for (const r of rows) {
+      const m = minutesOfDay(r.time);
+      const inside = overnight ? (m >= start || m < end) : (m >= start && m < end);
+      if (!inside) continue;
+
+      const key = overnight && m < end ? localDateKey(r.time, -1) : localDateKey(r.time);
+      const b = buckets.get(key);
+      if (!b) {
+        buckets.set(key, {
+          sessionKey: key, time: r.time, open: r.open, high: r.high, low: r.low,
+          close: r.close, volume: r.volume || 0, sourceBars: 1
+        });
+      } else {
+        b.high = Math.max(b.high, r.high);
+        b.low = Math.min(b.low, r.low);
+        b.close = r.close;
+        b.volume += r.volume || 0;
+        b.sourceBars += 1;
+      }
+    }
+    return [...buckets.values()].sort((a,b) => a.time - b.time);
+  }
+
   function computeValues(rows, metric) {
     const values = [];
     const paired = [];
-    for (let i = 0; i < rows.length; i++) {
+    for (const r of rows) {
       let v = NaN;
-      if (metric === 'cc_return' && i > 0 && rows[i-1].close !== 0) v = (rows[i].close / rows[i-1].close - 1) * 100;
-      else if (metric === 'log_return' && i > 0 && rows[i-1].close > 0 && rows[i].close > 0) v = Math.log(rows[i].close / rows[i-1].close) * 100;
-      else if (metric === 'oc_return' && rows[i].open !== 0) v = (rows[i].close / rows[i].open - 1) * 100;
-      else if (metric === 'range_pct' && rows[i].open !== 0) v = (rows[i].high - rows[i].low) / rows[i].open * 100;
-      else if (metric === 'abs_change' && i > 0) v = rows[i].close - rows[i-1].close;
-      if (Number.isFinite(v)) { values.push(v); paired.push({ ...rows[i], metricValue: v }); }
+      if (metric === 'range_abs') v = r.high - r.low;
+      else if (metric === 'range_pct' && r.open !== 0) v = (r.high - r.low) / r.open * 100;
+      if (Number.isFinite(v) && v >= 0) {
+        values.push(v);
+        paired.push({ ...r, metricValue: v });
+      }
     }
     return { values, paired };
   }
@@ -746,15 +821,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
   function normalCdf(x, m, sd) { if (sd <= 0) return x < m ? 0 : 1; return 0.5 * (1 + erf((x-m)/(sd*Math.SQRT2))); }
 
   function metricsLabel(metric) {
-    return {
-      cc_return: 'retorno fechamento → fechamento',
-      log_return: 'retorno logarítmico',
-      oc_return: 'retorno abertura → fechamento',
-      range_pct: 'amplitude High–Low',
-      abs_change: 'variação absoluta do fechamento',
-    }[metric];
+    return metric === 'range_pct' ? 'amplitude High–Low percentual' : 'amplitude High–Low absoluta';
   }
-  function unitForMetric(metric) { return metric === 'abs_change' ? '' : '%'; }
+
+  function unitForMetric(metric) { return metric === 'range_pct' ? '%' : ''; }
 
   function calcStats(values) {
     const m = mean(values);
@@ -762,8 +832,6 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     return {
       n: values.length, mean: m, std: sd, median: quantile(values,.5), skew: skewness(values,m,sd), kurt: excessKurtosis(values,m),
       p05: quantile(values,.05), p25: quantile(values,.25), p75: quantile(values,.75), p95: quantile(values,.95),
-      positive: values.filter(x => x > 0).length / values.length * 100,
-      negative: values.filter(x => x < 0).length / values.length * 100,
       min: Math.min(...values), max: Math.max(...values),
     };
   }
@@ -783,7 +851,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
 
     if ($('normalCurveToggle').checked && stats.std > 0) {
       const xs = [], ys = [];
-      const spanMin = Math.min(stats.min, stats.mean - 4*stats.std);
+      const spanMin = Math.max(0, Math.min(stats.min, stats.mean - 4*stats.std));
       const spanMax = Math.max(stats.max, stats.mean + 4*stats.std);
       const histnorm = $('normSelect').value;
       const binWidth = (stats.max - stats.min) / Math.max(5, Number($('binsInput').value) || 24);
@@ -806,7 +874,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
         { x: stats.mean+stats.std, color: '#fbbf24', dash: 'dot', width: 1 },
         { x: stats.mean-2*stats.std, color: '#fb7185', dash: 'dash', width: 1 },
         { x: stats.mean+2*stats.std, color: '#fb7185', dash: 'dash', width: 1 },
-      ].forEach(l => shapes.push({ type:'line', x0:l.x, x1:l.x, y0:0, y1:1, yref:'paper', line:{ color:l.color, dash:l.dash, width:l.width } }));
+      ].filter(l => l.x >= 0).forEach(l => shapes.push({ type:'line', x0:l.x, x1:l.x, y0:0, y1:1, yref:'paper', line:{ color:l.color, dash:l.dash, width:l.width } }));
     }
 
     const isLight = document.documentElement.dataset.theme === 'light';
@@ -831,7 +899,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
   function formatMetric(v, metric, digits=4) {
     if (!Number.isFinite(v)) return '—';
     const text = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: digits }).format(v);
-    return metric === 'abs_change' ? text : `${text}%`;
+    return metric === 'range_pct' ? `${text}%` : text;
   }
 
   function dateTime(t) {
@@ -880,15 +948,26 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
       return;
     }
 
-    const timeframe = $('timeframeSelect').value;
-    const resampled = resample(rows0, timeframe);
-    const filtered = filterPeriod(resampled);
+    const analysisMode = $('analysisModeSelect').value;
     const metric = $('metricSelect').value;
+    let observations;
+    let modeLabel;
+
+    if (analysisMode === 'session_range') {
+      observations = buildSessionRanges(rows0, $('sessionStartTime').value, $('sessionEndTime').value);
+      modeLabel = `faixa ${$('sessionStartTime').value || '09:00'}–${$('sessionEndTime').value || '10:00'} por pregão`;
+    } else {
+      const timeframe = $('timeframeSelect').value;
+      observations = resample(rows0, timeframe);
+      modeLabel = timeframe === 'raw' ? 'cada candle do timeframe original' : `cada candle de ${timeframe}`;
+    }
+
+    const filtered = filterPeriod(observations);
     const { values, paired } = computeValues(filtered, metric);
     state.lastRender = { bars: paired, values, metric };
 
     if (values.length < 2) {
-      showNotice('O recorte atual gerou menos de duas observações válidas. Amplie o período ou escolha outro timeframe.', 'error');
+      showNotice('O recorte atual gerou menos de duas amplitudes válidas. Amplie o período, ajuste a faixa horária ou use dados com granularidade suficiente.', 'error');
       clearStats();
       if (window.Plotly) Plotly.purge('chart');
       return;
@@ -898,7 +977,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     plot(values, stats, metric);
     const unit = unitForMetric(metric);
     $('chartTitle').textContent = `${asset} — ${metricsLabel(metric)}`;
-    $('chartSubtitle').textContent = `${$('customDateToggle').checked ? 'Intervalo personalizado' : (state.lookback === 'all' ? 'Todo o histórico disponível' : `Últimas ${state.lookback} observações`)} • ${timeframe === 'raw' ? 'timeframe original' : timeframe}`;
+    $('chartSubtitle').textContent = `${$('customDateToggle').checked ? 'Intervalo histórico personalizado' : (state.lookback === 'all' ? 'Todo o histórico disponível' : `Últimas ${state.lookback} observações`)} • ${modeLabel}`;
     $('rangeNote').textContent = `${dateOnly(filtered[0]?.time)} → ${dateOnly(filtered.at(-1)?.time)}`;
 
     $('statMean').textContent = fmt.format(stats.mean);
@@ -912,17 +991,16 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     $('p25').textContent = formatMetric(stats.p25, metric);
     $('p75').textContent = formatMetric(stats.p75, metric);
     $('p95').textContent = formatMetric(stats.p95, metric);
-    $('positivePct').textContent = `${fmt2.format(stats.positive)}%`;
-    $('negativePct').textContent = `${fmt2.format(stats.negative)}%`;
+    $('minAmp').textContent = formatMetric(stats.min, metric);
+    $('maxAmp').textContent = formatMetric(stats.max, metric);
     $('firstBar').textContent = dateTime(filtered[0]?.time);
     $('lastBar').textContent = dateTime(filtered.at(-1)?.time);
     $('barCount').textContent = fmt0.format(filtered.length);
     $('discardedCount').textContent = fmt0.format(state.discarded[asset] || 0);
-    updateProbability(values, stats);
-  }
+    updateProbability(values, stats);  }
 
   function clearStats() {
-    ['statMean','statStd','statMedian','statSkew','statKurt','statN','p05','p25','p75','p95','positivePct','negativePct','empiricalProb','normalProb','firstBar','lastBar','barCount','discardedCount'].forEach(id => $(id).textContent = '—');
+    ['statMean','statStd','statMedian','statSkew','statKurt','statN','p05','p25','p75','p95','minAmp','maxAmp','empiricalProb','normalProb','firstBar','lastBar','barCount','discardedCount'].forEach(id => $(id).textContent = '—');
   }
 
   function showNotice(message, type='success') {
@@ -969,7 +1047,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
   function downloadFilteredCsv() {
     const { bars, metric } = state.lastRender;
     if (!bars.length) return;
-    const lines = ['time,open,high,low,close,volume,metric_value'];
+    const lines = ['time,open,high,low,close,volume,amplitude'];
     for (const r of bars) lines.push([new Date(r.time).toISOString(),r.open,r.high,r.low,r.close,r.volume,r.metricValue].join(','));
     const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${state.activeAsset}_${metric}_recorte.csv`; a.click(); URL.revokeObjectURL(a.href);
@@ -978,6 +1056,12 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
   function saveTheme(theme) {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem('sino-theme', theme); } catch {}
+  }
+
+  function updateAnalysisModeUI() {
+    const sessionMode = $('analysisModeSelect').value === 'session_range';
+    $('sessionWindowFields').classList.toggle('hidden', !sessionMode);
+    $('timeframeField').classList.toggle('hidden', sessionMode);
   }
 
   function bindEvents() {
@@ -998,3 +1082,32 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragging'); }));
     ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragging'); }));
     dz.addEventListener('drop', e => { if (e.dataTransfer.files[0]) importFile(e.dataTransfer.files[0]); });
+
+    $('demoBtn').addEventListener('click', () => restoreDemo());
+    $('clearBtn').addEventListener('click', () => { const a=state.activeAsset; state.datasets[a]=[]; state.sources[a]={type:'none',name:'Sem dados'}; state.discarded[a]=0; render(); });
+    ['analysisModeSelect','sessionStartTime','sessionEndTime','timeframeSelect','metricSelect','binsInput','normSelect','normalCurveToggle','meanLinesToggle','customDateToggle','startDate','endDate','thresholdInput','thresholdDirection'].forEach(id => $(id).addEventListener('input', () => { updateAnalysisModeUI(); render(); }));
+
+    $('downloadCsvBtn').addEventListener('click', downloadFilteredCsv);
+    $('downloadPngBtn').addEventListener('click', () => {
+      if (window.Plotly && state.lastRender.values.length) Plotly.downloadImage('chart', { format:'png', filename:`${state.activeAsset}_curva_de_sino`, width:1400, height:850, scale:1.5 });
+    });
+    $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
+    $('themeBtn').addEventListener('click', () => { saveTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); render(); });
+    window.addEventListener('resize', () => { if (window.Plotly && $('chart')) Plotly.Plots.resize('chart'); });
+  }
+
+  function init() {
+    try { const saved = localStorage.getItem('sino-theme'); if (saved) saveTheme(saved); } catch {}
+    seedDemo();
+    bindEvents();
+    updateAnalysisModeUI();
+    updateDateInputs();
+    render();
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>
