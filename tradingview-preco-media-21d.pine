@@ -1,0 +1,109 @@
+//@version=6
+indicator("Sino do Mercado — Preço x Média 21D", shorttitle="Preço x Média 21D", overlay=false)
+
+// ============================================================================
+// INDICADOR: PREÇO ATUAL x MÉDIA DOS ÚLTIMOS 21 PREGÕES
+// Projeto: Sino do Mercado
+//
+// OBJETIVO
+// 1) Exibir o preço atual do ativo em uma janela independente.
+// 2) Exibir uma média simples calculada no timeframe diário.
+// 3) Mostrar visualmente se o preço está acima ou abaixo da média.
+//
+// OBSERVAÇÃO IMPORTANTE
+// Por padrão, a média usa somente pregões diários já encerrados.
+// Isso evita que o candle diário ainda em formação altere retroativamente
+// a referência durante o pregão.
+// ============================================================================
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARÂMETROS ALTERÁVEIS PELO USUÁRIO
+// ─────────────────────────────────────────────────────────────────────────────
+groupCalc = "Cálculo"
+lengthDays = input.int(21, "Número de pregões da média", minval=2, maxval=252, group=groupCalc)
+confirmedOnly = input.bool(true, "Usar somente pregões diários encerrados", group=groupCalc)
+
+groupVisual = "Visual"
+avgColor = input.color(color.orange, "Cor da média", group=groupVisual)
+aboveColor = input.color(color.lime, "Preço acima da média", group=groupVisual)
+belowColor = input.color(color.red, "Preço abaixo da média", group=groupVisual)
+priceWidth = input.int(2, "Espessura da linha do preço", minval=1, maxval=5, group=groupVisual)
+avgWidth = input.int(2, "Espessura da linha da média", minval=1, maxval=5, group=groupVisual)
+showStatus = input.bool(true, "Mostrar quadro de status", group=groupVisual)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CÁLCULO DA MÉDIA DIÁRIA
+// ─────────────────────────────────────────────────────────────────────────────
+// Média dos últimos N pregões já encerrados.
+// O [1] desloca o resultado em um candle diário.
+// lookahead_on é usado com esse deslocamento para manter o valor confirmado
+// consistente entre barras históricas e em tempo real.
+dailySmaConfirmed = request.security(
+    syminfo.tickerid,
+    "1D",
+    ta.sma(close, lengthDays)[1],
+    gaps=barmerge.gaps_off,
+    lookahead=barmerge.lookahead_on
+)
+
+// Alternativa: inclui o candle diário atual ainda em formação.
+dailySmaLive = request.security(
+    syminfo.tickerid,
+    "1D",
+    ta.sma(close, lengthDays),
+    gaps=barmerge.gaps_off,
+    lookahead=barmerge.lookahead_off
+)
+
+dailyAverage = confirmedOnly ? dailySmaConfirmed : dailySmaLive
+currentPrice = close
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POSIÇÃO DO PREÇO EM RELAÇÃO À MÉDIA
+// ─────────────────────────────────────────────────────────────────────────────
+isAbove = not na(dailyAverage) and currentPrice >= dailyAverage
+priceColor = isAbove ? aboveColor : belowColor
+distance = currentPrice - dailyAverage
+distancePct = not na(dailyAverage) and dailyAverage != 0 ? (distance / dailyAverage) * 100 : na
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DUAS LINHAS PRINCIPAIS DO INDICADOR
+// ─────────────────────────────────────────────────────────────────────────────
+plot(dailyAverage, "Média diária", color=avgColor, linewidth=avgWidth)
+plot(currentPrice, "Preço atual", color=priceColor, linewidth=priceWidth)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QUADRO DE STATUS
+// ─────────────────────────────────────────────────────────────────────────────
+var table statusTable = table.new(position.top_right, 2, 4, border_width=1)
+
+if barstate.islast
+    if showStatus
+        table.cell(statusTable, 0, 0, "Referência", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(statusTable, 1, 0, str.tostring(lengthDays) + " pregões", text_color=color.white, bgcolor=color.new(color.gray, 65))
+
+        table.cell(statusTable, 0, 1, "Preço")
+        table.cell(statusTable, 1, 1, str.tostring(currentPrice, format.mintick), text_color=priceColor)
+
+        table.cell(statusTable, 0, 2, "Média")
+        table.cell(statusTable, 1, 2, str.tostring(dailyAverage, format.mintick), text_color=avgColor)
+
+        table.cell(statusTable, 0, 3, "Distância")
+        table.cell(
+            statusTable,
+            1,
+            3,
+            na(distancePct) ? "—" : str.tostring(distancePct, "#.##") + "%",
+            text_color=priceColor
+        )
+    else
+        table.clear(statusTable, 0, 0, 1, 3)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALERTAS OPCIONAIS
+// ─────────────────────────────────────────────────────────────────────────────
+crossedAbove = ta.crossover(currentPrice, dailyAverage)
+crossedBelow = ta.crossunder(currentPrice, dailyAverage)
+
+alertcondition(crossedAbove, "Preço cruzou acima da média", "O preço cruzou acima da média diária configurada.")
+alertcondition(crossedBelow, "Preço cruzou abaixo da média", "O preço cruzou abaixo da média diária configurada.")
