@@ -1,283 +1,687 @@
 //@version=6
-indicator("Sino do Mercado — Preço x Média 21D + Faixas Estatísticas", shorttitle="Preço x Média 21D + Faixas", overlay=false)
+indicator("Sino do Mercado — Contexto Estatístico 21D", shorttitle="Contexto Estatístico 21D", overlay=false)
 
 // ============================================================================
-// SINO DO MERCADO — PREÇO x MÉDIA 21D + FAIXAS ESTATÍSTICAS
+// SINO DO MERCADO — CONTEXTO ESTATÍSTICO 21D
 // Pine Script v6
 //
-// OBJETIVO
-// 1) Manter uma janela independente do gráfico principal.
-// 2) Plotar o preço atual e a SMA dos últimos N pregões diários.
-// 3) Medir a distância percentual atual entre preço e média.
-// 4) Comparar essa distância com sua distribuição histórica.
-// 5) Criar faixas estatísticas em torno da média:
-//      • Percentis: P25–P75 (central) e P5–P95 (externa), ou
-//      • Desvio-padrão: média histórica ±1σ e ±2σ.
-// 6) Mostrar z-score, zona estatística e alertas de afastamento extremo.
+// O indicador combina:
+// • preço atual x SMA diária;
+// • percentil do afastamento;
+// • normalização em ATR;
+// • persistência fora das faixas;
+// • estatísticas assimétricas acima/abaixo da média;
+// • regime de volatilidade;
+// • regime de tendência da média;
+// • estudo histórico após entradas em P95/P5;
+// • tempo até retorno à faixa central;
+// • excursão adicional após extremos;
+// • comparação normalizada entre WIN, WDO, DI e EWZ;
+// • alertas seletivos com opção de confirmação no fechamento.
 //
-// IMPORTANTE
-// As estatísticas históricas usam somente pregões diários encerrados.
-// Isso reduz repainting e mantém a referência histórica estável.
+// Não é um gerador automático de sinais de compra/venda.
 // ============================================================================
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. PARÂMETROS DE CÁLCULO
+// 1. ENTRADAS — REFERÊNCIA, AMOSTRA E REGIMES
 // ─────────────────────────────────────────────────────────────────────────────
-groupCalc = "1. Cálculo"
+groupCalc = "1. Referência e estatística"
 lengthDays = input.int(21, "Pregões da média", minval=2, maxval=252, group=groupCalc)
-statsLookback = input.int(252, "Pregões da amostra estatística", minval=30, maxval=1500, group=groupCalc)
+statsLookback = input.int(252, "Observações da amostra", minval=30, maxval=1500, group=groupCalc)
 confirmedOnly = input.bool(true, "Média usa somente pregões encerrados", group=groupCalc)
+bandMode = input.string("Percentis", "Modelo das faixas", options=["Percentis", "Desvio-padrão"], group=groupCalc)
+regimeMatchedStats = input.bool(true, "Comparar com o mesmo regime de volatilidade", group=groupCalc)
+minRegimeSample = input.int(30, "Amostra mínima por regime", minval=10, maxval=250, group=groupCalc)
 
-bandMode = input.string(
-    "Percentis",
-    "Modelo das faixas",
-    options=["Percentis", "Desvio-padrão"],
-    group=groupCalc,
-    tooltip="Percentis: faixa central P25–P75 e externa P5–P95. Desvio-padrão: média histórica da distância ±1σ e ±2σ."
-)
+groupVol = "2. Volatilidade e ATR"
+atrLength = input.int(14, "ATR diário", minval=2, maxval=100, group=groupVol)
+volRefLength = input.int(60, "Referência do ATR", minval=10, maxval=252, group=groupVol)
+volLowRatio = input.float(0.80, "Volatilidade baixa: ATR / média ATR <", minval=0.10, maxval=2.00, step=0.05, group=groupVol)
+volHighRatio = input.float(1.20, "Volatilidade alta: ATR / média ATR >", minval=0.50, maxval=4.00, step=0.05, group=groupVol)
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. PARÂMETROS VISUAIS
-// ─────────────────────────────────────────────────────────────────────────────
-groupVisual = "2. Visual"
-avgColor = input.color(color.orange, "Cor da média 21D", group=groupVisual)
-aboveColor = input.color(color.lime, "Preço acima da média", group=groupVisual)
-belowColor = input.color(color.red, "Preço abaixo da média", group=groupVisual)
+groupTrend = "3. Tendência da média"
+slopeDays = input.int(5, "Janela da inclinação", minval=1, maxval=60, group=groupTrend)
+slopeThresholdPct = input.float(0.15, "Limiar lateral (%)", minval=0.00, maxval=5.00, step=0.05, group=groupTrend)
+
+groupEvent = "4. Estudo pós-extremo"
+maxEventDays = input.int(60, "Máximo de pregões acompanhados", minval=5, maxval=252, group=groupEvent)
+maxStoredEvents = input.int(500, "Máximo de eventos armazenados", minval=50, maxval=2000, group=groupEvent)
+
+groupCompare = "5. Comparação entre ativos"
+showComparison = input.bool(true, "Mostrar comparação WIN / WDO / DI / EWZ", group=groupCompare)
+symbolWIN = input.symbol("BMFBOVESPA:WIN1!", "WIN", group=groupCompare)
+symbolWDO = input.symbol("BMFBOVESPA:WDO1!", "WDO", group=groupCompare)
+symbolDI = input.symbol("BMFBOVESPA:DI11!", "DI", group=groupCompare)
+symbolEWZ = input.symbol("AMEX:EWZ", "EWZ", group=groupCompare)
+
+groupVisual = "6. Visual"
+avgColor = input.color(color.orange, "Média 21D", group=groupVisual)
+aboveColor = input.color(color.lime, "Preço acima", group=groupVisual)
+belowColor = input.color(color.red, "Preço abaixo", group=groupVisual)
 centralBandColor = input.color(color.teal, "Faixa central", group=groupVisual)
 outerBandColor = input.color(color.yellow, "Faixa intermediária", group=groupVisual)
-priceWidth = input.int(2, "Espessura da linha do preço", minval=1, maxval=5, group=groupVisual)
-avgWidth = input.int(2, "Espessura da linha da média", minval=1, maxval=5, group=groupVisual)
-showBands = input.bool(true, "Mostrar faixas estatísticas", group=groupVisual)
-showStatus = input.bool(true, "Mostrar quadro de status", group=groupVisual)
+showBands = input.bool(true, "Mostrar faixas", group=groupVisual)
+showMainTable = input.bool(true, "Mostrar quadro principal", group=groupVisual)
+showResearchTable = input.bool(true, "Mostrar estudo pós-extremo", group=groupVisual)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. FUNÇÃO: DISTRIBUIÇÃO HISTÓRICA DA DISTÂNCIA PARA A MÉDIA
+// 2. ENTRADAS — ALERTAS
 // ─────────────────────────────────────────────────────────────────────────────
-// Esta função é executada no contexto diário pelo request.security().
-//
-// Para cada pregão encerrado:
-// distância % = (fechamento - SMA) / SMA × 100
-//
-// Usamos close[1] e SMA[1] para trabalhar apenas com o último candle diário
-// confirmado. Em seguida, calculamos média, desvio e percentis da distância.
-f_distanceStats(int maLen, int sampleLen) =>
+groupAlerts = "7. Alertas"
+alertsOnlyOnClose = input.bool(true, "Confirmar alertas no fechamento do candle", group=groupAlerts)
+enableMeanCross = input.bool(true, "Cruzamentos da média", group=groupAlerts)
+enableP95P05 = input.bool(true, "Entrada/saída de P95/P5", group=groupAlerts)
+enableCentralReturn = input.bool(true, "Retorno à faixa central", group=groupAlerts)
+enableZAlert = input.bool(true, "Z-score extremo", group=groupAlerts)
+zAlertLevel = input.float(2.0, "Limiar absoluto do z-score", minval=0.5, maxval=5.0, step=0.25, group=groupAlerts)
+enableTrendExtreme = input.bool(true, "Extremo + direção da média", group=groupAlerts)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. FUNÇÕES AUXILIARES PARA ARRAYS
+// ─────────────────────────────────────────────────────────────────────────────
+f_pushFloat(array<float> id, float value, int cap) =>
+    if not na(value)
+        array.push(id, value)
+        if array.size(id) > cap
+            array.shift(id)
+
+f_pushInt(array<int> id, int value, int cap) =>
+    array.push(id, value)
+    if array.size(id) > cap
+        array.shift(id)
+
+f_rankProbe(array<float> id, float probe) =>
+    float result = na
+    int n = array.size(id)
+    if n > 0 and not na(probe)
+        int countLE = 0
+        for v in id
+            countLE += v <= probe ? 1 : 0
+        result := 100.0 * countLE / n
+    result
+
+f_percentile(array<float> id, float pct) =>
+    array.size(id) > 0 ? array.percentile_nearest_rank(id, pct) : na
+
+f_avg(array<float> id) =>
+    array.size(id) > 0 ? array.avg(id) : na
+
+f_stdev(array<float> id) =>
+    array.size(id) > 1 ? array.stdev(id) : na
+
+f_median(array<float> id) =>
+    array.size(id) > 0 ? array.median(id) : na
+
+f_asymStats(array<float> id) =>
+    array<float> positive = array.new_float()
+    array<float> negative = array.new_float()
+    for v in id
+        if v > 0
+            array.push(positive, v)
+        else if v < 0
+            array.push(negative, v)
+    float posAvg = f_avg(positive)
+    float negAvg = f_avg(negative)
+    float posP90 = f_percentile(positive, 90)
+    float negP10 = f_percentile(negative, 10)
+    [posAvg, negAvg, posP90, negP10, array.size(positive), array.size(negative)]
+
+f_volCode(float ratio, float lowLimit, float highLimit) =>
+    int code = 0
+    if not na(ratio)
+        code := ratio < lowLimit ? -1 : ratio > highLimit ? 1 : 0
+    code
+
+f_trendCode(float slopePct, float threshold) =>
+    int code = 0
+    if not na(slopePct)
+        code := slopePct > threshold ? 1 : slopePct < -threshold ? -1 : 0
+    code
+
+f_volText(int code) =>
+    code == 1 ? "Alta" : code == -1 ? "Baixa" : "Normal"
+
+f_trendText(int code) =>
+    code == 1 ? "Ascendente" : code == -1 ? "Descendente" : "Lateral"
+
+f_fmt(float value, string pattern) =>
+    na(value) ? "—" : str.tostring(value, pattern)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. MOTOR DIÁRIO
+// ─────────────────────────────────────────────────────────────────────────────
+// A função roda no contexto diário via request.security().
+// Arrays permanecem no contexto diário; somente escalares são devolvidos.
+// Isso evita copiar coleções inteiras para cada barra do gráfico.
+f_dailyEngine(
+    int maLen,
+    int sampleLen,
+    bool useConfirmedBasis,
+    int atrLen,
+    int atrRefLen,
+    float lowVol,
+    float highVol,
+    int slopeLen,
+    float slopeThreshold,
+    bool matchRegime,
+    int minimumRegimeN,
+    int eventMaxDays,
+    int eventStoreMax
+) =>
+    // Distribuições gerais e por regime.
+    var array<float> allDist = array.new_float()
+    var array<float> lowDist = array.new_float()
+    var array<float> normalDist = array.new_float()
+    var array<float> highDist = array.new_float()
+
+    // Eventos ativos.
+    var array<int> evSide = array.new_int()
+    var array<float> evEntryClose = array.new_float()
+    var array<float> evEntryDist = array.new_float()
+    var array<float> evCentralLow = array.new_float()
+    var array<float> evCentralHigh = array.new_float()
+    var array<int> evAge = array.new_int()
+    var array<bool> evReturned = array.new_bool()
+    var array<int> evReturnDay = array.new_int()
+    var array<float> evExcursion = array.new_float()
+
+    // Resultados de estudos históricos.
+    var array<float> post1 = array.new_float()
+    var array<float> post3 = array.new_float()
+    var array<float> post5 = array.new_float()
+    var array<float> returnDays = array.new_float()
+    var array<float> extraExcursion = array.new_float()
+
+    var int eventsTotal = 0
+    var int eventsUpper = 0
+    var int eventsLower = 0
+    var int eligible1 = 0
+    var int eligible3 = 0
+    var int eligible5 = 0
+    var int returnedBy1 = 0
+    var int returnedBy3 = 0
+    var int returnedBy5 = 0
+    var bool prevUpperExtreme = false
+    var bool prevLowerExtreme = false
+    var int lastProcessedTime = na
+
     float basis = ta.sma(close, maLen)
-    float confirmedBasis = basis[1]
-    float confirmedDistance = not na(confirmedBasis) and confirmedBasis != 0
-         ? (close[1] - confirmedBasis) / confirmedBasis * 100
+    float basisConfirmed = basis[1]
+    float referenceBasis = useConfirmedBasis ? basisConfirmed : basis
+    float confirmedClose = close[1]
+    float confirmedDist = not na(basisConfirmed) and basisConfirmed != 0
+         ? (confirmedClose - basisConfirmed) / basisConfirmed * 100
          : na
 
-    float distMean = ta.sma(confirmedDistance, sampleLen)
-    float distStd = ta.stdev(confirmedDistance, sampleLen)
-    float p05 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 5)
-    float p25 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 25)
-    float p75 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 75)
-    float p95 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 95)
+    float atrSeries = ta.atr(atrLen)
+    float confirmedAtr = atrSeries[1]
+    float confirmedAtrRef = ta.sma(atrSeries, atrRefLen)[1]
+    float confirmedVolRatio = not na(confirmedAtrRef) and confirmedAtrRef != 0
+         ? confirmedAtr / confirmedAtrRef
+         : na
+    int confirmedVolCode = f_volCode(confirmedVolRatio, lowVol, highVol)
 
-    [distMean, distStd, p05, p25, p75, p95]
+    float olderBasis = basis[1 + slopeLen]
+    float confirmedSlopePct = not na(olderBasis) and olderBasis != 0
+         ? (basisConfirmed - olderBasis) / olderBasis * 100
+         : na
+    int confirmedTrendCode = f_trendCode(confirmedSlopePct, slopeThreshold)
+
+    int confirmedTime = time[1]
+
+    // Processa cada pregão encerrado uma única vez, inclusive em atualizações realtime.
+    bool hasNewConfirmedDay = not na(confirmedTime) and confirmedTime != lastProcessedTime and not na(confirmedDist)
+    if hasNewConfirmedDay
+        // Amostra anterior ao pregão que está sendo classificado.
+        array<float> priorSample = allDist
+        if matchRegime
+            if confirmedVolCode == -1 and array.size(lowDist) >= minimumRegimeN
+                priorSample := lowDist
+            else if confirmedVolCode == 0 and array.size(normalDist) >= minimumRegimeN
+                priorSample := normalDist
+            else if confirmedVolCode == 1 and array.size(highDist) >= minimumRegimeN
+                priorSample := highDist
+
+        float priorP05 = f_percentile(priorSample, 5)
+        float priorP25 = f_percentile(priorSample, 25)
+        float priorP75 = f_percentile(priorSample, 75)
+        float priorP95 = f_percentile(priorSample, 95)
+
+        // Atualiza eventos já abertos com o novo pregão confirmado.
+        int activeN = array.size(evSide)
+        if activeN > 0
+            for i = activeN - 1 to 0
+                int side = array.get(evSide, i)
+                float entryClose = array.get(evEntryClose, i)
+                float entryDist = array.get(evEntryDist, i)
+                float centralLow = array.get(evCentralLow, i)
+                float centralHigh = array.get(evCentralHigh, i)
+                int age = array.get(evAge, i) + 1
+                bool returned = array.get(evReturned, i)
+                int returnDay = array.get(evReturnDay, i)
+                float excursion = array.get(evExcursion, i)
+
+                excursion := side == 1 ? math.max(excursion, confirmedDist) : math.min(excursion, confirmedDist)
+
+                bool inCentral = confirmedDist >= centralLow and confirmedDist <= centralHigh
+                if not returned and inCentral
+                    returned := true
+                    returnDay := age
+                    f_pushFloat(returnDays, float(age), eventStoreMax)
+                    float extra = side == 1 ? excursion - entryDist : entryDist - excursion
+                    f_pushFloat(extraExcursion, math.max(extra, 0), eventStoreMax)
+
+                float rawReturn = entryClose != 0 ? (confirmedClose / entryClose - 1.0) * 100 : na
+                float towardMeanReturn = not na(rawReturn) ? rawReturn * -side : na
+
+                if age == 1
+                    eligible1 += 1
+                    f_pushFloat(post1, towardMeanReturn, eventStoreMax)
+                    returnedBy1 += returned and returnDay <= 1 ? 1 : 0
+
+                if age == 3
+                    eligible3 += 1
+                    f_pushFloat(post3, towardMeanReturn, eventStoreMax)
+                    returnedBy3 += returned and returnDay <= 3 ? 1 : 0
+
+                if age == 5
+                    eligible5 += 1
+                    f_pushFloat(post5, towardMeanReturn, eventStoreMax)
+                    returnedBy5 += returned and returnDay <= 5 ? 1 : 0
+
+                array.set(evAge, i, age)
+                array.set(evReturned, i, returned)
+                array.set(evReturnDay, i, returnDay)
+                array.set(evExcursion, i, excursion)
+
+                bool removeEvent = (returned and age >= 5) or age >= eventMaxDays
+                if removeEvent
+                    array.remove(evSide, i)
+                    array.remove(evEntryClose, i)
+                    array.remove(evEntryDist, i)
+                    array.remove(evCentralLow, i)
+                    array.remove(evCentralHigh, i)
+                    array.remove(evAge, i)
+                    array.remove(evReturned, i)
+                    array.remove(evReturnDay, i)
+                    array.remove(evExcursion, i)
+
+        // Novo evento somente na entrada em P95/P5, não em todos os dias extremos.
+        bool enoughPrior = array.size(priorSample) >= math.min(minimumRegimeN, 20)
+        bool upperExtreme = enoughPrior and not na(priorP95) and confirmedDist > priorP95
+        bool lowerExtreme = enoughPrior and not na(priorP05) and confirmedDist < priorP05
+        bool newUpper = upperExtreme and not prevUpperExtreme
+        bool newLower = lowerExtreme and not prevLowerExtreme
+
+        if (newUpper or newLower) and not na(priorP25) and not na(priorP75)
+            int side = newUpper ? 1 : -1
+            array.push(evSide, side)
+            array.push(evEntryClose, confirmedClose)
+            array.push(evEntryDist, confirmedDist)
+            array.push(evCentralLow, priorP25)
+            array.push(evCentralHigh, priorP75)
+            array.push(evAge, 0)
+            array.push(evReturned, false)
+            array.push(evReturnDay, 0)
+            array.push(evExcursion, confirmedDist)
+            eventsTotal += 1
+            eventsUpper += side == 1 ? 1 : 0
+            eventsLower += side == -1 ? 1 : 0
+
+        prevUpperExtreme := upperExtreme
+        prevLowerExtreme := lowerExtreme
+
+        // Só depois da classificação adicionamos o dia à amostra.
+        f_pushFloat(allDist, confirmedDist, sampleLen)
+        if confirmedVolCode == -1
+            f_pushFloat(lowDist, confirmedDist, sampleLen)
+        else if confirmedVolCode == 0
+            f_pushFloat(normalDist, confirmedDist, sampleLen)
+        else
+            f_pushFloat(highDist, confirmedDist, sampleLen)
+
+        lastProcessedTime := confirmedTime
+
+    // Seleciona a distribuição vigente para o preço atual.
+    array<float> activeSample = allDist
+    if matchRegime
+        if confirmedVolCode == -1 and array.size(lowDist) >= minimumRegimeN
+            activeSample := lowDist
+        else if confirmedVolCode == 0 and array.size(normalDist) >= minimumRegimeN
+            activeSample := normalDist
+        else if confirmedVolCode == 1 and array.size(highDist) >= minimumRegimeN
+            activeSample := highDist
+
+    float currentDist = not na(referenceBasis) and referenceBasis != 0
+         ? (close - referenceBasis) / referenceBasis * 100
+         : na
+    float currentRank = f_rankProbe(activeSample, currentDist)
+    float currentAtrUnits = not na(confirmedAtr) and confirmedAtr != 0
+         ? (close - referenceBasis) / confirmedAtr
+         : na
+
+    float distMean = f_avg(activeSample)
+    float distStd = f_stdev(activeSample)
+    float p05 = f_percentile(activeSample, 5)
+    float p25 = f_percentile(activeSample, 25)
+    float p75 = f_percentile(activeSample, 75)
+    float p95 = f_percentile(activeSample, 95)
+
+    [posAvg, negAvg, posP90, negP10, posN, negN] = f_asymStats(activeSample)
+
+    float z = not na(distStd) and distStd > 0 and not na(currentDist)
+         ? (currentDist - distMean) / distStd
+         : na
+
+    float post1Median = f_median(post1)
+    float post3Median = f_median(post3)
+    float post5Median = f_median(post5)
+    float revert1 = eligible1 > 0 ? 100.0 * returnedBy1 / eligible1 : na
+    float revert3 = eligible3 > 0 ? 100.0 * returnedBy3 / eligible3 : na
+    float revert5 = eligible5 > 0 ? 100.0 * returnedBy5 / eligible5 : na
+    float returnMedian = f_median(returnDays)
+    float returnP75 = f_percentile(returnDays, 75)
+    float excursionMedian = f_median(extraExcursion)
+    float excursionP75 = f_percentile(extraExcursion, 75)
+
+    [
+        referenceBasis, currentDist, currentRank, currentAtrUnits, z,
+        distMean, distStd, p05, p25, p75, p95, array.size(activeSample),
+        posAvg, negAvg, posP90, negP10, posN, negN,
+        confirmedVolRatio, confirmedVolCode, confirmedSlopePct, confirmedTrendCode,
+        eventsTotal, eventsUpper, eventsLower, array.size(evSide),
+        post1Median, post3Median, post5Median,
+        array.size(post1), array.size(post3), array.size(post5),
+        revert1, revert3, revert5,
+        returnMedian, returnP75, excursionMedian, excursionP75
+    ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. MÉDIA DIÁRIA DE REFERÊNCIA
+// 5. EXECUÇÃO DO MOTOR DIÁRIO PARA O ATIVO DO GRÁFICO
 // ─────────────────────────────────────────────────────────────────────────────
-// Versão confirmada e não-repainting: valor da SMA no último pregão encerrado.
-dailySmaConfirmed = request.security(
+[
+    dailyAverage, currentDistancePct, currentPercentile, currentAtrUnits, zScore,
+    histDistMean, histDistStd, histP05, histP25, histP75, histP95, activeSampleN,
+    positiveAvg, negativeAvg, positiveP90, negativeP10, positiveN, negativeN,
+    currentVolRatio, currentVolCode, currentSlopePct, currentTrendCode,
+    eventCount, upperEventCount, lowerEventCount, activeEventCount,
+    post1Median, post3Median, post5Median,
+    post1N, post3N, post5N,
+    returnCentral1, returnCentral3, returnCentral5,
+    returnDaysMedian, returnDaysP75, extraExcursionMedian, extraExcursionP75
+] = request.security(
     syminfo.tickerid,
     "1D",
-    ta.sma(close, lengthDays)[1],
+    f_dailyEngine(
+        lengthDays, statsLookback, confirmedOnly,
+        atrLength, volRefLength, volLowRatio, volHighRatio,
+        slopeDays, slopeThresholdPct,
+        regimeMatchedStats, minRegimeSample,
+        maxEventDays, maxStoredEvents
+    ),
     gaps=barmerge.gaps_off,
     lookahead=barmerge.lookahead_on
 )
 
-// Alternativa opcional: inclui o candle diário atual ainda em formação.
-dailySmaLive = request.security(
-    syminfo.tickerid,
-    "1D",
-    ta.sma(close, lengthDays),
-    gaps=barmerge.gaps_off,
-    lookahead=barmerge.lookahead_off
-)
-
-dailyAverage = confirmedOnly ? dailySmaConfirmed : dailySmaLive
 currentPrice = close
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. ESTATÍSTICAS HISTÓRICAS CONFIRMADAS
+// 6. FAIXAS ESTATÍSTICAS
 // ─────────────────────────────────────────────────────────────────────────────
-[histDistMean, histDistStd, histP05, histP25, histP75, histP95] = request.security(
-    syminfo.tickerid,
-    "1D",
-    f_distanceStats(lengthDays, statsLookback),
-    gaps=barmerge.gaps_off,
-    lookahead=barmerge.lookahead_on
-)
-
-// Distância atual do preço em relação à média diária.
-currentDistancePct = not na(dailyAverage) and dailyAverage != 0
-     ? (currentPrice - dailyAverage) / dailyAverage * 100
-     : na
-
-// Z-score mede quão distante o valor atual está da distribuição histórica.
-zScore = not na(histDistStd) and histDistStd > 0 and not na(currentDistancePct)
-     ? (currentDistancePct - histDistMean) / histDistStd
-     : na
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. LIMITES DAS FAIXAS EM PERCENTUAL
-// ─────────────────────────────────────────────────────────────────────────────
-// Percentis:
-//   central = P25 a P75
-//   externa = P5 a P95
-//
-// Desvio-padrão:
-//   central = média histórica ±1σ
-//   externa = média histórica ±2σ
 innerLowerPct = bandMode == "Percentis" ? histP25 : histDistMean - histDistStd
 innerUpperPct = bandMode == "Percentis" ? histP75 : histDistMean + histDistStd
 outerLowerPct = bandMode == "Percentis" ? histP05 : histDistMean - 2.0 * histDistStd
 outerUpperPct = bandMode == "Percentis" ? histP95 : histDistMean + 2.0 * histDistStd
 
-// Converte distância percentual para o mesmo eixo de preço do painel.
-innerLowerPrice = not na(dailyAverage) and not na(innerLowerPct)
-     ? dailyAverage * (1.0 + innerLowerPct / 100.0)
-     : na
-innerUpperPrice = not na(dailyAverage) and not na(innerUpperPct)
-     ? dailyAverage * (1.0 + innerUpperPct / 100.0)
-     : na
-outerLowerPrice = not na(dailyAverage) and not na(outerLowerPct)
-     ? dailyAverage * (1.0 + outerLowerPct / 100.0)
-     : na
-outerUpperPrice = not na(dailyAverage) and not na(outerUpperPct)
-     ? dailyAverage * (1.0 + outerUpperPct / 100.0)
-     : na
+innerLowerPrice = not na(dailyAverage) and not na(innerLowerPct) ? dailyAverage * (1 + innerLowerPct / 100) : na
+innerUpperPrice = not na(dailyAverage) and not na(innerUpperPct) ? dailyAverage * (1 + innerUpperPct / 100) : na
+outerLowerPrice = not na(dailyAverage) and not na(outerLowerPct) ? dailyAverage * (1 + outerLowerPct / 100) : na
+outerUpperPrice = not na(dailyAverage) and not na(outerUpperPct) ? dailyAverage * (1 + outerUpperPct / 100) : na
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 7. CLASSIFICAÇÃO DA POSIÇÃO ATUAL
-// ─────────────────────────────────────────────────────────────────────────────
-statsReady = not na(innerLowerPct) and not na(innerUpperPct) and not na(outerLowerPct) and not na(outerUpperPct)
 isAboveAverage = not na(dailyAverage) and currentPrice >= dailyAverage
 priceColor = isAboveAverage ? aboveColor : belowColor
 
-string zoneText = "Sem histórico suficiente"
-color zoneColor = color.gray
+bool inCentral = not na(currentDistancePct) and currentDistancePct >= innerLowerPct and currentDistancePct <= innerUpperPct
+bool upperIntermediate = not na(currentDistancePct) and currentDistancePct > innerUpperPct and currentDistancePct <= outerUpperPct
+bool lowerIntermediate = not na(currentDistancePct) and currentDistancePct < innerLowerPct and currentDistancePct >= outerLowerPct
+bool upperExtremeNow = not na(currentDistancePct) and currentDistancePct > outerUpperPct
+bool lowerExtremeNow = not na(currentDistancePct) and currentDistancePct < outerLowerPct
 
-if statsReady and not na(currentDistancePct)
-    if currentDistancePct > outerUpperPct
-        zoneText := "Extremo acima"
-        zoneColor := color.red
-    else if currentDistancePct < outerLowerPct
-        zoneText := "Extremo abaixo"
-        zoneColor := color.red
-    else if currentDistancePct > innerUpperPct
-        zoneText := "Intermediário acima"
-        zoneColor := color.yellow
-    else if currentDistancePct < innerLowerPct
-        zoneText := "Intermediário abaixo"
-        zoneColor := color.yellow
-    else
-        zoneText := "Faixa central"
-        zoneColor := color.teal
+string zoneText = upperExtremeNow ? "Extremo acima" :
+     lowerExtremeNow ? "Extremo abaixo" :
+     upperIntermediate ? "Intermediário acima" :
+     lowerIntermediate ? "Intermediário abaixo" :
+     inCentral ? "Faixa central" : "Sem dados"
+
+color zoneColor = upperExtremeNow or lowerExtremeNow ? color.red :
+     upperIntermediate or lowerIntermediate ? color.yellow :
+     inCentral ? color.teal : color.gray
+
+// Persistência no estado atual, em barras do gráfico.
+// Em gráfico diário, equivale a pregões; em intradiário, é persistência intraday.
+var string lastZone = ""
+var int zoneBars = 0
+if zoneText == lastZone
+    zoneBars += 1
+else
+    zoneBars := 1
+    lastZone := zoneText
+
+// Persistência diária da condição extrema, independente do timeframe do gráfico.
+dailyExtremeState = request.security(
+    syminfo.tickerid,
+    "1D",
+    currentDistancePct > histP95 ? 1 : currentDistancePct < histP05 ? -1 : 0,
+    gaps=barmerge.gaps_off,
+    lookahead=barmerge.lookahead_off
+)
+var int extremeDays = 0
+var int prevDailyExtremeState = 0
+bool newCalendarDay = ta.change(time("1D")) != 0
+if newCalendarDay
+    int stateNow = int(nz(dailyExtremeState[1], 0))
+    extremeDays := stateNow != 0 and stateNow == prevDailyExtremeState ? extremeDays + 1 : stateNow != 0 ? 1 : 0
+    prevDailyExtremeState := stateNow
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 8. PLOTS PRINCIPAIS
+// 7. PLOTS
 // ─────────────────────────────────────────────────────────────────────────────
-avgPlot = plot(dailyAverage, "Média diária", color=avgColor, linewidth=avgWidth)
-pricePlot = plot(currentPrice, "Preço atual", color=priceColor, linewidth=priceWidth)
+plot(dailyAverage, "Média diária", color=avgColor, linewidth=2)
+plot(currentPrice, "Preço atual", color=priceColor, linewidth=2)
 
 outerUpperPlot = plot(showBands ? outerUpperPrice : na, "Limite externo superior", color=color.new(outerBandColor, 25), linewidth=1)
 innerUpperPlot = plot(showBands ? innerUpperPrice : na, "Limite central superior", color=color.new(centralBandColor, 10), linewidth=1)
 innerLowerPlot = plot(showBands ? innerLowerPrice : na, "Limite central inferior", color=color.new(centralBandColor, 10), linewidth=1)
 outerLowerPlot = plot(showBands ? outerLowerPrice : na, "Limite externo inferior", color=color.new(outerBandColor, 25), linewidth=1)
 
-// Área historicamente mais comum.
-fill(
-    innerUpperPlot,
-    innerLowerPlot,
-    color=showBands ? color.new(centralBandColor, 88) : na,
-    title="Faixa central"
-)
-
-// Regiões intermediárias entre a faixa central e a externa.
-fill(
-    outerUpperPlot,
-    innerUpperPlot,
-    color=showBands ? color.new(outerBandColor, 91) : na,
-    title="Faixa intermediária superior"
-)
-fill(
-    innerLowerPlot,
-    outerLowerPlot,
-    color=showBands ? color.new(outerBandColor, 91) : na,
-    title="Faixa intermediária inferior"
-)
+fill(innerUpperPlot, innerLowerPlot, color=showBands ? color.new(centralBandColor, 88) : na, title="Faixa central")
+fill(outerUpperPlot, innerUpperPlot, color=showBands ? color.new(outerBandColor, 91) : na, title="Faixa intermediária superior")
+fill(innerLowerPlot, outerLowerPlot, color=showBands ? color.new(outerBandColor, 91) : na, title="Faixa intermediária inferior")
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 9. QUADRO DE STATUS
+// 8. QUADRO PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
-var table statusTable = table.new(position.top_right, 2, 7, border_width=1)
+var table mainTable = table.new(position.top_right, 2, 11, border_width=1)
 
 if barstate.islast
-    if showStatus
-        table.cell(statusTable, 0, 0, "Referência", text_color=color.white, bgcolor=color.new(color.gray, 65))
-        table.cell(statusTable, 1, 0, str.tostring(lengthDays) + " pregões", text_color=color.white, bgcolor=color.new(color.gray, 65))
+    if showMainTable
+        table.cell(mainTable, 0, 0, "Métrica", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(mainTable, 1, 0, "Valor", text_color=color.white, bgcolor=color.new(color.gray, 65))
 
-        table.cell(statusTable, 0, 1, "Preço")
-        table.cell(statusTable, 1, 1, str.tostring(currentPrice, format.mintick), text_color=priceColor)
+        table.cell(mainTable, 0, 1, "Preço")
+        table.cell(mainTable, 1, 1, str.tostring(currentPrice, format.mintick), text_color=priceColor)
 
-        table.cell(statusTable, 0, 2, "Média")
-        table.cell(statusTable, 1, 2, str.tostring(dailyAverage, format.mintick), text_color=avgColor)
+        table.cell(mainTable, 0, 2, "Média " + str.tostring(lengthDays) + "D")
+        table.cell(mainTable, 1, 2, str.tostring(dailyAverage, format.mintick), text_color=avgColor)
 
-        table.cell(statusTable, 0, 3, "Distância")
-        table.cell(
-            statusTable,
-            1,
-            3,
-            na(currentDistancePct) ? "—" : str.tostring(currentDistancePct, "#.##") + "%",
-            text_color=priceColor
-        )
+        table.cell(mainTable, 0, 3, "Distância")
+        table.cell(mainTable, 1, 3, f_fmt(currentDistancePct, "#.##") + "%", text_color=priceColor)
 
-        table.cell(statusTable, 0, 4, "Z-score")
-        table.cell(
-            statusTable,
-            1,
-            4,
-            na(zScore) ? "—" : str.tostring(zScore, "#.##"),
-            text_color=zoneColor
-        )
+        table.cell(mainTable, 0, 4, "Percentil")
+        table.cell(mainTable, 1, 4, na(currentPercentile) ? "—" : "P" + str.tostring(math.round(currentPercentile)), text_color=zoneColor)
 
-        table.cell(statusTable, 0, 5, "Zona")
-        table.cell(statusTable, 1, 5, zoneText, text_color=zoneColor)
+        table.cell(mainTable, 0, 5, "Z-score")
+        table.cell(mainTable, 1, 5, f_fmt(zScore, "#.##"), text_color=zoneColor)
 
-        table.cell(statusTable, 0, 6, "Amostra")
-        table.cell(statusTable, 1, 6, str.tostring(statsLookback) + " pregões")
+        table.cell(mainTable, 0, 6, "Distância / ATR")
+        table.cell(mainTable, 1, 6, f_fmt(currentAtrUnits, "#.##") + " ATR", text_color=zoneColor)
+
+        table.cell(mainTable, 0, 7, "Zona")
+        table.cell(mainTable, 1, 7, zoneText, text_color=zoneColor)
+
+        table.cell(mainTable, 0, 8, "Volatilidade")
+        table.cell(mainTable, 1, 8, f_volText(currentVolCode) + " (" + f_fmt(currentVolRatio, "#.##") + "x)")
+
+        table.cell(mainTable, 0, 9, "Média / tendência")
+        table.cell(mainTable, 1, 9, f_trendText(currentTrendCode) + " (" + f_fmt(currentSlopePct, "#.##") + "%)")
+
+        table.cell(mainTable, 0, 10, "Persistência")
+        table.cell(mainTable, 1, 10, (extremeDays > 0 ? str.tostring(extremeDays) + " pregões extremo" : str.tostring(zoneBars) + " barras na zona"))
     else
-        table.clear(statusTable, 0, 0, 1, 6)
+        table.clear(mainTable, 0, 0, 1, 10)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 10. ALERTAS
+// 9. ESTATÍSTICAS ASSIMÉTRICAS + ESTUDO PÓS-EXTREMO
 // ─────────────────────────────────────────────────────────────────────────────
-crossedAboveAverage = ta.crossover(currentPrice, dailyAverage)
-crossedBelowAverage = ta.crossunder(currentPrice, dailyAverage)
+var table researchTable = table.new(position.bottom_left, 4, 9, border_width=1)
 
-enteredUpperExtreme = statsReady and ta.crossover(currentPrice, outerUpperPrice)
-enteredLowerExtreme = statsReady and ta.crossunder(currentPrice, outerLowerPrice)
+if barstate.islast
+    if showResearchTable
+        table.cell(researchTable, 0, 0, "Pesquisa", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(researchTable, 1, 0, "1 pregão", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(researchTable, 2, 0, "3 pregões", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(researchTable, 3, 0, "5 pregões", text_color=color.white, bgcolor=color.new(color.gray, 65))
 
-alertcondition(
-    crossedAboveAverage,
-    "Preço cruzou acima da média",
-    "O preço cruzou acima da média diária configurada."
-)
-alertcondition(
-    crossedBelowAverage,
-    "Preço cruzou abaixo da média",
-    "O preço cruzou abaixo da média diária configurada."
-)
-alertcondition(
-    enteredUpperExtreme,
-    "Preço entrou em extremo superior",
-    "O preço ultrapassou o limite estatístico externo superior."
-)
-alertcondition(
-    enteredLowerExtreme,
-    "Preço entrou em extremo inferior",
-    "O preço ultrapassou o limite estatístico externo inferior."
-)
+        table.cell(researchTable, 0, 1, "Retorno mediano rumo à média")
+        table.cell(researchTable, 1, 1, f_fmt(post1Median, "#.##") + "%")
+        table.cell(researchTable, 2, 1, f_fmt(post3Median, "#.##") + "%")
+        table.cell(researchTable, 3, 1, f_fmt(post5Median, "#.##") + "%")
+
+        table.cell(researchTable, 0, 2, "Voltou à faixa central")
+        table.cell(researchTable, 1, 2, f_fmt(returnCentral1, "#.#") + "%")
+        table.cell(researchTable, 2, 2, f_fmt(returnCentral3, "#.#") + "%")
+        table.cell(researchTable, 3, 2, f_fmt(returnCentral5, "#.#") + "%")
+
+        table.cell(researchTable, 0, 3, "Amostra pós-extremo")
+        table.cell(researchTable, 1, 3, str.tostring(post1N))
+        table.cell(researchTable, 2, 3, str.tostring(post3N))
+        table.cell(researchTable, 3, 3, str.tostring(post5N))
+
+        table.cell(researchTable, 0, 4, "Tempo até central")
+        table.cell(researchTable, 1, 4, "Mediana")
+        table.cell(researchTable, 2, 4, f_fmt(returnDaysMedian, "#.#") + " pregões")
+        table.cell(researchTable, 3, 4, "P75 " + f_fmt(returnDaysP75, "#.#"))
+
+        table.cell(researchTable, 0, 5, "Excursão adicional")
+        table.cell(researchTable, 1, 5, "Mediana")
+        table.cell(researchTable, 2, 5, f_fmt(extraExcursionMedian, "#.##") + " p.p.")
+        table.cell(researchTable, 3, 5, "P75 " + f_fmt(extraExcursionP75, "#.##"))
+
+        table.cell(researchTable, 0, 6, "Afastamentos acima")
+        table.cell(researchTable, 1, 6, "N " + str.tostring(positiveN))
+        table.cell(researchTable, 2, 6, "Média " + f_fmt(positiveAvg, "#.##") + "%")
+        table.cell(researchTable, 3, 6, "P90 " + f_fmt(positiveP90, "#.##") + "%")
+
+        table.cell(researchTable, 0, 7, "Afastamentos abaixo")
+        table.cell(researchTable, 1, 7, "N " + str.tostring(negativeN))
+        table.cell(researchTable, 2, 7, "Média " + f_fmt(negativeAvg, "#.##") + "%")
+        table.cell(researchTable, 3, 7, "P10 " + f_fmt(negativeP10, "#.##") + "%")
+
+        table.cell(researchTable, 0, 8, "Eventos P95/P5")
+        table.cell(researchTable, 1, 8, "Total " + str.tostring(eventCount))
+        table.cell(researchTable, 2, 8, "Acima " + str.tostring(upperEventCount))
+        table.cell(researchTable, 3, 8, "Abaixo " + str.tostring(lowerEventCount))
+    else
+        table.clear(researchTable, 0, 0, 3, 8)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10. COMPARAÇÃO NORMALIZADA ENTRE ATIVOS
+// ─────────────────────────────────────────────────────────────────────────────
+f_compareSnapshot(int maLen, int sampleLen, int atrLen, int atrRefLen, int slopeLen, float slopeThreshold, float lowVol, float highVol) =>
+    float basis = ta.sma(close, maLen)
+    float refBasis = basis[1]
+    float liveDist = not na(refBasis) and refBasis != 0 ? (close - refBasis) / refBasis * 100 : na
+    float rank = ta.percentrank(liveDist, sampleLen)
+    float atrConfirmed = ta.atr(atrLen)[1]
+    float atrUnits = not na(atrConfirmed) and atrConfirmed != 0 ? (close - refBasis) / atrConfirmed : na
+    float atrRef = ta.sma(ta.atr(atrLen), atrRefLen)[1]
+    float volRatio = not na(atrRef) and atrRef != 0 ? atrConfirmed / atrRef : na
+    float olderBasis = basis[1 + slopeLen]
+    float slope = not na(olderBasis) and olderBasis != 0 ? (refBasis - olderBasis) / olderBasis * 100 : na
+    int volCode = f_volCode(volRatio, lowVol, highVol)
+    int trendCode = f_trendCode(slope, slopeThreshold)
+    [liveDist, rank, atrUnits, volRatio, volCode, slope, trendCode]
+
+[winDist, winRank, winAtr, winVolRatio, winVolCode, winSlope, winTrendCode] = request.security(symbolWIN, "1D", f_compareSnapshot(lengthDays, statsLookback, atrLength, volRefLength, slopeDays, slopeThresholdPct, volLowRatio, volHighRatio), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+[wdoDist, wdoRank, wdoAtr, wdoVolRatio, wdoVolCode, wdoSlope, wdoTrendCode] = request.security(symbolWDO, "1D", f_compareSnapshot(lengthDays, statsLookback, atrLength, volRefLength, slopeDays, slopeThresholdPct, volLowRatio, volHighRatio), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+[diDist, diRank, diAtr, diVolRatio, diVolCode, diSlope, diTrendCode] = request.security(symbolDI, "1D", f_compareSnapshot(lengthDays, statsLookback, atrLength, volRefLength, slopeDays, slopeThresholdPct, volLowRatio, volHighRatio), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+[ewzDist, ewzRank, ewzAtr, ewzVolRatio, ewzVolCode, ewzSlope, ewzTrendCode] = request.security(symbolEWZ, "1D", f_compareSnapshot(lengthDays, statsLookback, atrLength, volRefLength, slopeDays, slopeThresholdPct, volLowRatio, volHighRatio), gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+
+var table comparisonTable = table.new(position.bottom_right, 6, 5, border_width=1)
+
+f_fillCompareRow(table t, int row, string label, float dist, float rank, float atrUnits, int volCode, int trendCode) =>
+    table.cell(t, 0, row, label)
+    table.cell(t, 1, row, na(rank) ? "—" : "P" + str.tostring(math.round(rank)))
+    table.cell(t, 2, row, f_fmt(dist, "#.##") + "%")
+    table.cell(t, 3, row, f_fmt(atrUnits, "#.##") + " ATR")
+    table.cell(t, 4, row, f_volText(volCode))
+    table.cell(t, 5, row, f_trendText(trendCode))
+
+if barstate.islast
+    if showComparison
+        table.cell(comparisonTable, 0, 0, "Ativo", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(comparisonTable, 1, 0, "Percentil", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(comparisonTable, 2, 0, "Dist.", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(comparisonTable, 3, 0, "ATR", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(comparisonTable, 4, 0, "Vol.", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        table.cell(comparisonTable, 5, 0, "Média", text_color=color.white, bgcolor=color.new(color.gray, 65))
+        f_fillCompareRow(comparisonTable, 1, "WIN", winDist, winRank, winAtr, winVolCode, winTrendCode)
+        f_fillCompareRow(comparisonTable, 2, "WDO", wdoDist, wdoRank, wdoAtr, wdoVolCode, wdoTrendCode)
+        f_fillCompareRow(comparisonTable, 3, "DI", diDist, diRank, diAtr, diVolCode, diTrendCode)
+        f_fillCompareRow(comparisonTable, 4, "EWZ", ewzDist, ewzRank, ewzAtr, ewzVolCode, ewzTrendCode)
+    else
+        table.clear(comparisonTable, 0, 0, 5, 4)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 11. ALERTAS SELETIVOS
+// ─────────────────────────────────────────────────────────────────────────────
+alertGate = not alertsOnlyOnClose or barstate.isconfirmed
+
+crossAboveMean = alertGate and ta.crossover(currentPrice, dailyAverage)
+crossBelowMean = alertGate and ta.crossunder(currentPrice, dailyAverage)
+
+enterP95 = alertGate and ta.crossover(currentDistancePct, histP95)
+enterP05 = alertGate and ta.crossunder(currentDistancePct, histP05)
+exitP95 = alertGate and ta.crossunder(currentDistancePct, histP95)
+exitP05 = alertGate and ta.crossover(currentDistancePct, histP05)
+
+returnCentralFromAbove = alertGate and ta.crossunder(currentDistancePct, histP75)
+returnCentralFromBelow = alertGate and ta.crossover(currentDistancePct, histP25)
+
+zExtreme = alertGate and not na(zScore) and math.abs(zScore) >= zAlertLevel
+upperExtremeRisingMean = alertGate and currentDistancePct > histP95 and currentTrendCode == 1
+lowerExtremeFallingMean = alertGate and currentDistancePct < histP05 and currentTrendCode == -1
+
+alertcondition(enableMeanCross and crossAboveMean, "Preço cruzou acima da média", "O preço cruzou acima da média diária configurada.")
+alertcondition(enableMeanCross and crossBelowMean, "Preço cruzou abaixo da média", "O preço cruzou abaixo da média diária configurada.")
+
+alertcondition(enableP95P05 and enterP95, "Entrou acima do P95", "O afastamento do preço entrou acima do percentil 95 histórico.")
+alertcondition(enableP95P05 and enterP05, "Entrou abaixo do P5", "O afastamento do preço entrou abaixo do percentil 5 histórico.")
+alertcondition(enableP95P05 and exitP95, "Saiu da região acima do P95", "O afastamento retornou para dentro do limite P95.")
+alertcondition(enableP95P05 and exitP05, "Saiu da região abaixo do P5", "O afastamento retornou para dentro do limite P5.")
+
+alertcondition(enableCentralReturn and returnCentralFromAbove, "Retornou à faixa central por cima", "O afastamento retornou à faixa central após estar acima dela.")
+alertcondition(enableCentralReturn and returnCentralFromBelow, "Retornou à faixa central por baixo", "O afastamento retornou à faixa central após estar abaixo dela.")
+
+alertcondition(enableZAlert and zExtreme, "Z-score extremo", "O valor absoluto do z-score atingiu ou superou o limiar configurado.")
+alertcondition(enableTrendExtreme and upperExtremeRisingMean, "Extremo superior + média ascendente", "Preço em afastamento superior extremo enquanto a média diária está ascendente.")
+alertcondition(enableTrendExtreme and lowerExtremeFallingMean, "Extremo inferior + média descendente", "Preço em afastamento inferior extremo enquanto a média diária está descendente.")
+
+anyEnabledAlert =
+     (enableMeanCross and (crossAboveMean or crossBelowMean)) or
+     (enableP95P05 and (enterP95 or enterP05 or exitP95 or exitP05)) or
+     (enableCentralReturn and (returnCentralFromAbove or returnCentralFromBelow)) or
+     (enableZAlert and zExtreme) or
+     (enableTrendExtreme and (upperExtremeRisingMean or lowerExtremeFallingMean))
+
+alertcondition(anyEnabledAlert, "Qualquer alerta habilitado do Contexto Estatístico", "Uma das condições habilitadas do indicador Contexto Estatístico 21D foi acionada.")
