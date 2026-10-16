@@ -185,9 +185,35 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
 .callout { background: color-mix(in srgb, var(--warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent); color: var(--text); border-radius: 12px; padding: 12px 14px; }
 .dialog-actions { display: flex; justify-content: flex-end; padding: 14px 22px 20px; border-top: 1px solid var(--border); }
 
+
+.top-actions a { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+input[type="time"] {
+  width: 100%;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 10px;
+  outline: none;
+}
+input[type="time"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent); }
+.compare-panel { overflow: hidden; }
+.comparison-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0 4px; }
+.comparison-range { padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--card2); }
+.comparison-range > strong { display: block; margin-bottom: 8px; font-size: 12px; }
+.comparison-time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.comparison-time-grid label { display: grid; gap: 4px; }
+.comparison-time-grid span { color: var(--muted); font-size: 10px; }
+.comparison-chart { width: 100%; min-height: 430px; margin-top: 8px; }
+.comparison-table { overflow-x: auto; margin-top: 10px; }
+.comparison-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.comparison-table th, .comparison-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.comparison-table th:first-child, .comparison-table td:first-child { text-align: left; }
+.comparison-table th { color: var(--muted); font-weight: 700; }
 @media (max-width: 1180px) {
+  .comparison-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .layout { grid-template-columns: 290px minmax(0, 1fr); }
   .stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
 }
 @media (max-width: 860px) {
   .app-shell { padding: 16px; }
@@ -199,6 +225,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
   .chart { min-height: 440px; }
 }
 @media (max-width: 560px) {
+  .comparison-controls { grid-template-columns: 1fr; }
   .app-shell { padding: 10px; }
   .top-actions, .top-actions .btn { width: 100%; }
   .top-actions .btn { flex: 1; }
@@ -223,6 +250,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
         <p class="subtitle">Descubra como a amplitude <strong>Máxima − Mínima</strong> de WINFUT, WDOFUT, DI1FUT e EWZ se distribui em uma faixa de tempo escolhida.</p>
       </div>
       <div class="top-actions">
+        <a class="btn ghost" href="tutorial-dados.html">⇩ Dados reais</a>
         <button id="themeBtn" class="btn ghost" type="button" aria-label="Alternar tema">◐ Tema</button>
         <button id="helpBtn" class="btn ghost" type="button">? Como usar</button>
       </div>
@@ -259,7 +287,14 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
             <button id="demoBtn" class="btn secondary grow" type="button">Restaurar demo</button>
             <button id="clearBtn" class="btn secondary grow" type="button">Limpar ativo</button>
           </div>
-          <p class="hint">O arquivo é processado no seu navegador. Nada é enviado a um servidor.</p>
+          <label class="field" style="margin-top:10px">
+            <span>Ao importar outro CSV</span>
+            <select id="importModeSelect">
+              <option value="replace">Substituir os dados deste ativo</option>
+              <option value="merge">Adicionar/mesclar ao histórico</option>
+            </select>
+          </label>
+          <p class="hint">No modo “Adicionar/mesclar”, candles com o mesmo timestamp são deduplicados. O arquivo é processado no seu navegador; nada é enviado a um servidor.</p>
         </section>
 
         <section class="control-section">
@@ -432,6 +467,48 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
           </article>
         </section>
 
+        <section class="card panel compare-panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Comparação intradiária</span>
+              <h3>Comparador de faixas horárias</h3>
+            </div>
+          </div>
+          <p class="hint">Compare a distribuição empírica das amplitudes de até quatro faixas do pregão. As curvas abaixo são densidades suavizadas (KDE) calculadas com os mesmos dias e filtros da análise principal.</p>
+          <div class="comparison-controls">
+            <div class="comparison-range">
+              <strong>Faixa A</strong>
+              <div class="comparison-time-grid">
+                <label><span>Início</span><input data-compare-time id="cmpStart1" type="time" value="09:00" step="60"></label>
+                <label><span>Fim</span><input data-compare-time id="cmpEnd1" type="time" value="09:30" step="60"></label>
+              </div>
+            </div>
+            <div class="comparison-range">
+              <strong>Faixa B</strong>
+              <div class="comparison-time-grid">
+                <label><span>Início</span><input data-compare-time id="cmpStart2" type="time" value="09:30" step="60"></label>
+                <label><span>Fim</span><input data-compare-time id="cmpEnd2" type="time" value="10:00" step="60"></label>
+              </div>
+            </div>
+            <div class="comparison-range">
+              <strong>Faixa C</strong>
+              <div class="comparison-time-grid">
+                <label><span>Início</span><input data-compare-time id="cmpStart3" type="time" value="10:00" step="60"></label>
+                <label><span>Fim</span><input data-compare-time id="cmpEnd3" type="time" value="11:00" step="60"></label>
+              </div>
+            </div>
+            <div class="comparison-range">
+              <strong>Faixa D</strong>
+              <div class="comparison-time-grid">
+                <label><span>Início</span><input data-compare-time id="cmpStart4" type="time" value="11:00" step="60"></label>
+                <label><span>Fim</span><input data-compare-time id="cmpEnd4" type="time" value="12:00" step="60"></label>
+              </div>
+            </div>
+          </div>
+          <div id="comparisonChart" class="comparison-chart" aria-label="Comparação das distribuições de amplitude por faixa horária"></div>
+          <div id="comparisonTable" class="comparison-table"></div>
+        </section>
+
         <section class="card panel details-panel">
           <div class="panel-head">
             <div>
@@ -478,6 +555,9 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
         <p>O app não consegue “inventar” granularidade menor que a presente no CSV. Para estudar 5 minutos com precisão, importe dados de 5 minutos ou menores.</p>
         <h3>O que é a curva de sino?</h3>
         <p>O histograma mostra a distribuição das amplitudes realmente observadas. A linha normal é ajustada à média e ao desvio-padrão da amostra apenas como referência visual; amplitudes são não negativas e não precisam seguir uma distribuição normal.</p>
+        <h3>Adicionar vários períodos</h3>
+        <p>Em <strong>Ao importar outro CSV</strong>, escolha <strong>Adicionar/mesclar ao histórico</strong>. Você pode carregar vários arquivos do mesmo ativo; candles repetidos são deduplicados pelo timestamp.</p>
+        <p><a href="tutorial-dados.html">Abrir tutorial completo de dados reais e fontes recomendadas →</a></p>
         <div class="callout">A demonstração inicial usa dados sintéticos apenas para mostrar o funcionamento da interface. Importe dados reais antes de interpretar resultados.</div>
       </div>
       <div class="dialog-actions">
@@ -932,6 +1012,86 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     $('normalProb').textContent = `${fmt2.format(Math.max(0,Math.min(1,normal))*100)}%`;
   }
 
+  function kernelDensity(values, xs) {
+    if (!values.length) return xs.map(() => 0);
+    const m = mean(values);
+    const sd = stddev(values, m);
+    const spread = Math.max(...values) - Math.min(...values);
+    let bw = 1.06 * sd * Math.pow(values.length, -0.2);
+    if (!Number.isFinite(bw) || bw <= 0) bw = Math.max(spread / 18, Math.abs(m) * 0.04, 1e-9);
+    const inv = 1 / (values.length * bw * Math.sqrt(2 * Math.PI));
+    return xs.map(x => inv * values.reduce((sum, v) => {
+      const z = (x - v) / bw;
+      return sum + Math.exp(-0.5 * z * z);
+    }, 0));
+  }
+
+  function comparisonRanges() {
+    return [1,2,3,4].map((i, idx) => {
+      const start = $('cmpStart'+i).value;
+      const end = $('cmpEnd'+i).value;
+      return { name: 'Faixa ' + String.fromCharCode(65 + idx), start, end, label: `${start}–${end}` };
+    });
+  }
+
+  function renderComparison(rows0, metric) {
+    const chart = $('comparisonChart');
+    const table = $('comparisonTable');
+    if (!chart || !table) return;
+
+    const groups = comparisonRanges().map(r => {
+      const obs = filterPeriod(buildSessionRanges(rows0, r.start, r.end));
+      const computed = computeValues(obs, metric);
+      return { ...r, values: computed.values, stats: computed.values.length >= 2 ? calcStats(computed.values) : null };
+    });
+    const usable = groups.filter(g => g.stats && g.values.length >= 2);
+    if (!usable.length) {
+      if (window.Plotly) Plotly.purge(chart);
+      chart.innerHTML = '<div style="display:grid;place-items:center;height:300px;color:var(--muted);text-align:center">Não há observações suficientes para comparar as faixas selecionadas.</div>';
+      table.innerHTML = '';
+      return;
+    }
+
+    const all = usable.flatMap(g => g.values);
+    const maxObserved = Math.max(...all);
+    const xMax = maxObserved > 0 ? maxObserved * 1.06 : 1;
+    const xs = Array.from({length: 160}, (_, i) => xMax * i / 159);
+    const unit = unitForMetric(metric);
+    const traces = usable.map(g => ({
+      type: 'scatter',
+      mode: 'lines',
+      name: g.label,
+      x: xs,
+      y: kernelDensity(g.values, xs),
+      line: { width: 3 },
+      hovertemplate: `Amplitude: %{x:.4f}${unit}<br>Densidade: %{y:.5f}<extra>${g.label}</extra>`
+    }));
+    const layout = {
+      margin: { l: 64, r: 24, t: 24, b: 58 },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e5e7eb' },
+      xaxis: { title: metric === 'range_pct' ? 'Amplitude High–Low (%)' : 'Amplitude High–Low', gridcolor: 'rgba(148,163,184,.12)', rangemode: 'tozero' },
+      yaxis: { title: 'Densidade empírica suavizada', gridcolor: 'rgba(148,163,184,.12)', rangemode: 'tozero' },
+      legend: { orientation: 'h', y: 1.12 },
+      hovermode: 'x unified'
+    };
+    if (window.Plotly) Plotly.react(chart, traces, layout, { responsive:true, displaylogo:false, locale:'pt-BR' });
+
+    table.innerHTML = `<table>
+      <thead><tr><th>Faixa</th><th>Amostra</th><th>Média</th><th>Mediana</th><th>P75</th><th>P95</th><th>Máxima</th></tr></thead>
+      <tbody>${groups.map(g => g.stats ? `<tr>
+        <td><strong>${g.label}</strong></td>
+        <td>${fmt0.format(g.stats.n)}</td>
+        <td>${formatMetric(g.stats.mean, metric)}</td>
+        <td>${formatMetric(g.stats.median, metric)}</td>
+        <td>${formatMetric(g.stats.p75, metric)}</td>
+        <td>${formatMetric(g.stats.p95, metric)}</td>
+        <td>${formatMetric(g.stats.max, metric)}</td>
+      </tr>` : `<tr><td><strong>${g.label}</strong></td><td colspan="6">dados insuficientes</td></tr>`).join('')}</tbody>
+    </table>`;
+  }
+
   function render() {
     const asset = state.activeAsset;
     const rows0 = state.datasets[asset] || [];
@@ -945,6 +1105,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
       if (window.Plotly) Plotly.purge('chart');
       $('chart').innerHTML = '<div style="display:grid;place-items:center;height:420px;color:var(--muted);text-align:center;padding:30px">Sem dados para este ativo.<br>Importe um CSV ou restaure a demonstração.</div>';
       clearStats();
+      if ($('comparisonChart') && window.Plotly) Plotly.purge('comparisonChart');
+      if ($('comparisonTable')) $('comparisonTable').innerHTML = '';
       return;
     }
 
@@ -997,7 +1159,9 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     $('lastBar').textContent = dateTime(filtered.at(-1)?.time);
     $('barCount').textContent = fmt0.format(filtered.length);
     $('discardedCount').textContent = fmt0.format(state.discarded[asset] || 0);
-    updateProbability(values, stats);  }
+    updateProbability(values, stats);
+    renderComparison(rows0, metric);
+  }
 
   function clearStats() {
     ['statMean','statStd','statMedian','statSkew','statKurt','statN','p05','p25','p75','p95','minAmp','maxAmp','empiricalProb','normalProb','firstBar','lastBar','barCount','discardedCount'].forEach(id => $(id).textContent = '—');
@@ -1024,11 +1188,26 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
       const text = await file.text();
       const parsed = parseOHLCV(text);
       const asset = state.activeAsset;
-      state.datasets[asset] = parsed.rows;
-      state.sources[asset] = { type:'real', name:file.name };
-      state.discarded[asset] = parsed.discarded;
+      const mode = $('importModeSelect')?.value || 'replace';
+      const existingSource = state.sources[asset] || {};
+      const canMerge = mode === 'merge' && existingSource.type === 'real' && (state.datasets[asset] || []).length;
+
+      if (canMerge) {
+        const merged = new Map((state.datasets[asset] || []).map(r => [r.time, r]));
+        parsed.rows.forEach(r => merged.set(r.time, r));
+        state.datasets[asset] = [...merged.values()].sort((a,b) => a.time - b.time);
+        const previousFiles = Array.isArray(existingSource.files) ? existingSource.files : (existingSource.name ? [existingSource.name] : []);
+        const files = [...new Set([...previousFiles, file.name])];
+        state.sources[asset] = { type:'real', name:`${files.length} arquivos combinados`, files };
+        state.discarded[asset] = (state.discarded[asset] || 0) + parsed.discarded;
+        showNotice(`${file.name} mesclado em ${asset}: ${fmt0.format(state.datasets[asset].length)} timestamps únicos no histórico.`, 'success');
+      } else {
+        state.datasets[asset] = parsed.rows;
+        state.sources[asset] = { type:'real', name:file.name, files:[file.name] };
+        state.discarded[asset] = parsed.discarded;
+        showNotice(`${file.name} importado para ${asset}: ${fmt0.format(parsed.rows.length)} candles válidos.`, 'success');
+      }
       updateDateInputs();
-      showNotice(`${file.name} importado para ${asset}: ${fmt0.format(parsed.rows.length)} candles válidos.`, 'success');
       render();
     } catch (e) {
       showNotice(`Falha ao importar: ${e.message}`, 'error');
@@ -1086,6 +1265,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
     $('demoBtn').addEventListener('click', () => restoreDemo());
     $('clearBtn').addEventListener('click', () => { const a=state.activeAsset; state.datasets[a]=[]; state.sources[a]={type:'none',name:'Sem dados'}; state.discarded[a]=0; render(); });
     ['analysisModeSelect','sessionStartTime','sessionEndTime','timeframeSelect','metricSelect','binsInput','normSelect','normalCurveToggle','meanLinesToggle','customDateToggle','startDate','endDate','thresholdInput','thresholdDirection'].forEach(id => $(id).addEventListener('input', () => { updateAnalysisModeUI(); render(); }));
+
+    document.querySelectorAll('[data-compare-time]').forEach(el => el.addEventListener('input', render));
 
     $('downloadCsvBtn').addEventListener('click', downloadFilteredCsv);
     $('downloadPngBtn').addEventListener('click', () => {
