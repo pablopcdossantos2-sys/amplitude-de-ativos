@@ -147,6 +147,33 @@ f_trendText(int code) =>
 f_fmt(float value, string pattern) =>
     na(value) ? "—" : str.tostring(value, pattern)
 
+f_estimateRank(
+    float probe,
+    float q00, float q05, float q10, float q15, float q20,
+    float q25, float q30, float q35, float q40, float q45,
+    float q50, float q55, float q60, float q65, float q70,
+    float q75, float q80, float q85, float q90, float q95, float q100
+) =>
+    float result = na
+    array<float> qs = array.from(
+        q00, q05, q10, q15, q20, q25, q30, q35, q40, q45,
+        q50, q55, q60, q65, q70, q75, q80, q85, q90, q95, q100
+    )
+    if not na(probe) and not na(q00) and not na(q100)
+        if probe <= q00
+            result := 0
+        else if probe >= q100
+            result := 100
+        else
+            for i = 0 to 19
+                float lo = array.get(qs, i)
+                float hi = array.get(qs, i + 1)
+                if not na(lo) and not na(hi) and probe >= lo and probe <= hi
+                    float basePct = i * 5.0
+                    result := hi == lo ? basePct + 5.0 : basePct + 5.0 * (probe - lo) / (hi - lo)
+                    break
+    result
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. MOTOR DIÁRIO
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,7 +183,6 @@ f_fmt(float value, string pattern) =>
 f_dailyEngine(
     int maLen,
     int sampleLen,
-    bool useConfirmedBasis,
     int atrLen,
     int atrRefLen,
     float lowVol,
@@ -207,7 +233,6 @@ f_dailyEngine(
 
     float basis = ta.sma(close, maLen)
     float basisConfirmed = basis[1]
-    float referenceBasis = useConfirmedBasis ? basisConfirmed : basis
     float confirmedClose = close[1]
     float confirmedDist = not na(basisConfirmed) and basisConfirmed != 0
          ? (confirmedClose - basisConfirmed) / basisConfirmed * 100
@@ -352,26 +377,32 @@ f_dailyEngine(
         else if confirmedVolCode == 1 and array.size(highDist) >= minimumRegimeN
             activeSample := highDist
 
-    float currentDist = not na(referenceBasis) and referenceBasis != 0
-         ? (close - referenceBasis) / referenceBasis * 100
-         : na
-    float currentRank = f_rankProbe(activeSample, currentDist)
-    float currentAtrUnits = not na(confirmedAtr) and confirmedAtr != 0
-         ? (close - referenceBasis) / confirmedAtr
-         : na
-
     float distMean = f_avg(activeSample)
     float distStd = f_stdev(activeSample)
+
+    float p00 = array.size(activeSample) > 0 ? array.min(activeSample) : na
     float p05 = f_percentile(activeSample, 5)
+    float p10 = f_percentile(activeSample, 10)
+    float p15 = f_percentile(activeSample, 15)
+    float p20 = f_percentile(activeSample, 20)
     float p25 = f_percentile(activeSample, 25)
+    float p30 = f_percentile(activeSample, 30)
+    float p35 = f_percentile(activeSample, 35)
+    float p40 = f_percentile(activeSample, 40)
+    float p45 = f_percentile(activeSample, 45)
+    float p50 = f_percentile(activeSample, 50)
+    float p55 = f_percentile(activeSample, 55)
+    float p60 = f_percentile(activeSample, 60)
+    float p65 = f_percentile(activeSample, 65)
+    float p70 = f_percentile(activeSample, 70)
     float p75 = f_percentile(activeSample, 75)
+    float p80 = f_percentile(activeSample, 80)
+    float p85 = f_percentile(activeSample, 85)
+    float p90 = f_percentile(activeSample, 90)
     float p95 = f_percentile(activeSample, 95)
+    float p100 = array.size(activeSample) > 0 ? array.max(activeSample) : na
 
     [posAvg, negAvg, posP90, negP10, posN, negN] = f_asymStats(activeSample)
-
-    float z = not na(distStd) and distStd > 0 and not na(currentDist)
-         ? (currentDist - distMean) / distStd
-         : na
 
     float post1Median = f_median(post1)
     float post3Median = f_median(post3)
@@ -385,8 +416,11 @@ f_dailyEngine(
     float excursionP75 = f_percentile(extraExcursion, 75)
 
     [
-        referenceBasis, currentDist, currentRank, currentAtrUnits, z,
-        distMean, distStd, p05, p25, p75, p95, array.size(activeSample),
+        basisConfirmed, confirmedAtr,
+        distMean, distStd,
+        p00, p05, p10, p15, p20, p25, p30, p35, p40, p45,
+        p50, p55, p60, p65, p70, p75, p80, p85, p90, p95, p100,
+        array.size(activeSample),
         posAvg, negAvg, posP90, negP10, posN, negN,
         confirmedVolRatio, confirmedVolCode, confirmedSlopePct, confirmedTrendCode,
         eventsTotal, eventsUpper, eventsLower, array.size(evSide),
@@ -400,8 +434,11 @@ f_dailyEngine(
 // 5. EXECUÇÃO DO MOTOR DIÁRIO PARA O ATIVO DO GRÁFICO
 // ─────────────────────────────────────────────────────────────────────────────
 [
-    dailyAverage, currentDistancePct, currentPercentile, currentAtrUnits, zScore,
-    histDistMean, histDistStd, histP05, histP25, histP75, histP95, activeSampleN,
+    dailyAverageConfirmed, confirmedDailyAtr,
+    histDistMean, histDistStd,
+    histP00, histP05, histP10, histP15, histP20, histP25, histP30, histP35, histP40, histP45,
+    histP50, histP55, histP60, histP65, histP70, histP75, histP80, histP85, histP90, histP95, histP100,
+    activeSampleN,
     positiveAvg, negativeAvg, positiveP90, negativeP10, positiveN, negativeN,
     currentVolRatio, currentVolCode, currentSlopePct, currentTrendCode,
     eventCount, upperEventCount, lowerEventCount, activeEventCount,
@@ -413,7 +450,7 @@ f_dailyEngine(
     syminfo.tickerid,
     "1D",
     f_dailyEngine(
-        lengthDays, statsLookback, confirmedOnly,
+        lengthDays, statsLookback,
         atrLength, volRefLength, volLowRatio, volHighRatio,
         slopeDays, slopeThresholdPct,
         regimeMatchedStats, minRegimeSample,
@@ -423,9 +460,40 @@ f_dailyEngine(
     lookahead=barmerge.lookahead_on
 )
 
-currentPrice = close
+// A versão "live" é opcional. O padrão usa a SMA confirmada acima.
+dailyAverageLive = request.security(
+    syminfo.tickerid,
+    "1D",
+    ta.sma(close, lengthDays),
+    gaps=barmerge.gaps_off,
+    lookahead=barmerge.lookahead_off
+)
 
-// ─────────────────────────────────────────────────────────────────────────────
+dailyAverage = confirmedOnly ? dailyAverageConfirmed : dailyAverageLive
+currentPrice = close
+currentDistancePct = not na(dailyAverage) and dailyAverage != 0
+     ? (currentPrice - dailyAverage) / dailyAverage * 100
+     : na
+currentAtrUnits = not na(confirmedDailyAtr) and confirmedDailyAtr != 0 and not na(dailyAverage)
+     ? (currentPrice - dailyAverage) / confirmedDailyAtr
+     : na
+zScore = not na(histDistStd) and histDistStd > 0 and not na(currentDistancePct)
+     ? (currentDistancePct - histDistMean) / histDistStd
+     : na
+
+// Percentil aproximado por interpolação em uma grade histórica de 5 p.p.
+// A grade é calculada no contexto diário confirmado, inclusive quando a
+// distribuição está filtrada pelo mesmo regime de volatilidade.
+float currentPercentile = na
+if barstate.islast
+    currentPercentile := f_estimateRank(
+        currentDistancePct,
+        histP00, histP05, histP10, histP15, histP20,
+        histP25, histP30, histP35, histP40, histP45,
+        histP50, histP55, histP60, histP65, histP70,
+        histP75, histP80, histP85, histP90, histP95, histP100
+    )
+
 // 6. FAIXAS ESTATÍSTICAS
 // ─────────────────────────────────────────────────────────────────────────────
 innerLowerPct = bandMode == "Percentis" ? histP25 : histDistMean - histDistStd
@@ -468,18 +536,14 @@ else
     lastZone := zoneText
 
 // Persistência diária da condição extrema, independente do timeframe do gráfico.
-dailyExtremeState = request.security(
-    syminfo.tickerid,
-    "1D",
-    currentDistancePct > histP95 ? 1 : currentDistancePct < histP05 ? -1 : 0,
-    gaps=barmerge.gaps_off,
-    lookahead=barmerge.lookahead_off
-)
+// No primeiro candle de um novo pregão, classificamos o último candle do
+// pregão anterior contra os limites que estavam disponíveis naquele momento.
 var int extremeDays = 0
 var int prevDailyExtremeState = 0
 bool newCalendarDay = ta.change(time("1D")) != 0
 if newCalendarDay
-    int stateNow = int(nz(dailyExtremeState[1], 0))
+    int stateNow = not na(currentDistancePct[1]) and not na(histP95[1]) and currentDistancePct[1] > histP95[1] ? 1 :
+         not na(currentDistancePct[1]) and not na(histP05[1]) and currentDistancePct[1] < histP05[1] ? -1 : 0
     extremeDays := stateNow != 0 and stateNow == prevDailyExtremeState ? extremeDays + 1 : stateNow != 0 ? 1 : 0
     prevDailyExtremeState := stateNow
 
