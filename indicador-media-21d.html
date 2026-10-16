@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Indicador TradingView do projeto Sino do Mercado: preço atual comparado à média dos últimos 21 pregões.">
+<title>Indicador Preço x Média 21D — Sino do Mercado</title>
+<style>
+:root{color-scheme:dark;--bg:#07101f;--card:#0f1c31;--card2:#13233c;--text:#f3f6fb;--muted:#9cadc2;--line:rgba(148,163,184,.18);--accent:#60a5fa;--cyan:#22d3ee;--good:#34d399;--bad:#fb7185;--warn:#fbbf24}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 10% -10%,rgba(37,99,235,.2),transparent 28%),radial-gradient(circle at 92% 8%,rgba(34,211,238,.08),transparent 24%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.65}
+main{max-width:1120px;margin:auto;padding:30px 20px 70px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:30px}.nav{display:flex;gap:10px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px 13px;font-weight:700;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--accent),var(--cyan));color:white;border-color:transparent}.eyebrow{color:var(--cyan);text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:800}h1{font-size:clamp(34px,6vw,58px);line-height:1.02;letter-spacing:-.05em;margin:8px 0 12px}h2{margin-top:36px;font-size:26px}h3{margin-top:22px}.lead{color:var(--muted);max-width:850px;font-size:18px}.card{background:rgba(15,28,49,.94);border:1px solid var(--line);border-radius:18px;padding:20px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.metric{padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.metric strong{display:block;font-size:26px;margin-top:4px}.muted{color:var(--muted)}.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{background:var(--card2);padding:2px 5px;border-radius:5px}.code-wrap{position:relative}.code-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}pre{overflow:auto;max-height:680px;background:#06101d;border:1px solid var(--line);padding:16px;border-radius:14px;color:#dce8f8;font-size:13px;line-height:1.5;white-space:pre}.callout{border-left:4px solid var(--warn);background:rgba(251,191,36,.08);padding:13px 15px;border-radius:8px}.callout.ok{border-left-color:var(--good);background:rgba(52,211,153,.07)}.steps li{margin:8px 0}.demo{padding:18px}.demo-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:12px}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.dot.avg{background:var(--warn)}.dot.price{background:var(--good)}svg{width:100%;height:auto;display:block;background:#081424;border:1px solid var(--line);border-radius:14px}.axis{stroke:rgba(148,163,184,.18);stroke-width:1}.avgline{fill:none;stroke:#fbbf24;stroke-width:3}.priceline{fill:none;stroke:#34d399;stroke-width:3}.area{fill:rgba(52,211,153,.05)}.status{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.status>div{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px}.status span{display:block;color:var(--muted);font-size:11px}.status strong{font-size:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted)}footer{color:var(--muted);font-size:12px;margin-top:46px;padding-top:18px;border-top:1px solid var(--line)}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.top{display:block}.nav{margin-top:16px}.status{grid-template-columns:1fr}.demo-head{display:block}.legend{margin-top:8px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <div class="eyebrow">TradingView • Pine Script v6</div>
+      <h1>Preço x Média 21D</h1>
+      <p class="lead">Um painel independente para mostrar duas referências simples: a média dos últimos 21 pregões e a posição atual do preço em relação a ela.</p>
+    </div>
+    <nav class="nav">
+      <a class="btn" href="index.html">← Sino do Mercado</a>
+      <a class="btn" href="tutorial-dados.html">Dados reais</a>
+      <a class="btn primary" href="tradingview-preco-media-21d.pine">Código .pine</a>
+    </nav>
+  </header>
+
+  <section class="card">
+    <div class="eyebrow">Objetivo</div>
+    <h2 style="margin-top:7px">O que o indicador mostra</h2>
+    <div class="grid">
+      <div class="metric">
+        <span class="muted">Linha 1</span>
+        <strong class="warn">Média 21D</strong>
+        <p>Média móvel simples dos últimos 21 pregões diários. Por padrão, usa somente dias já encerrados.</p>
+      </div>
+      <div class="metric">
+        <span class="muted">Linha 2</span>
+        <strong class="good">Preço atual</strong>
+        <p>Preço corrente do ativo. A linha fica verde quando está acima da média e vermelha quando está abaixo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card demo">
+    <div class="demo-head">
+      <div>
+        <div class="eyebrow">Ilustração conceitual</div>
+        <h2 style="margin:5px 0 0">Janela independente do preço</h2>
+      </div>
+      <div class="legend">
+        <span><i class="dot avg"></i>Média 21D</span>
+        <span><i class="dot price"></i>Preço atual</span>
+      </div>
+    </div>
+    <svg viewBox="0 0 900 330" role="img" aria-label="Exemplo conceitual do preço acima e abaixo da média de 21 dias">
+      <line class="axis" x1="55" y1="60" x2="855" y2="60"/><line class="axis" x1="55" y1="140" x2="855" y2="140"/><line class="axis" x1="55" y1="220" x2="855" y2="220"/><line class="axis" x1="55" y1="290" x2="855" y2="290"/>
+      <path class="avgline" d="M55 196 C150 190,210 185,290 180 S450 172,540 165 S700 158,855 150"/>
+      <path class="area" d="M55 230 C130 218,180 205,245 214 S360 160,430 176 S550 128,625 142 S755 112,855 96 L855 290 L55 290 Z"/>
+      <path class="priceline" d="M55 230 C130 218,180 205,245 214 S360 160,430 176 S550 128,625 142 S755 112,855 96"/>
+      <text x="690" y="142" fill="#fbbf24" font-size="14">Média 21D</text>
+      <text x="740" y="87" fill="#34d399" font-size="14">Preço atual</text>
+    </svg>
+    <div class="status">
+      <div><span>Situação ilustrada</span><strong class="good">Preço acima</strong></div>
+      <div><span>Referência</span><strong>21 pregões</strong></div>
+      <div><span>Painel</span><strong>Separado</strong></div>
+    </div>
+  </section>
+
+  <h2>Como a média é calculada</h2>
+  <p>O indicador solicita ao TradingView dados do timeframe diário e calcula uma <strong>SMA de 21 pregões</strong>. A configuração padrão usa somente candles diários encerrados. Dessa forma, durante o pregão atual, a linha de referência permanece baseada nos 21 fechamentos diários já conhecidos, enquanto a linha de preço acompanha o mercado.</p>
+
+  <div class="callout ok"><strong>Por que 21?</strong> Aproxima um mês típico de pregões. O número é editável nas configurações do indicador; você pode testar 10, 20, 21, 50 ou outro valor sem alterar o código.</div>
+
+  <h2>Como interpretar</h2>
+  <div class="table-wrap card">
+    <table>
+      <thead><tr><th>Situação</th><th>Leitura objetiva</th><th>O que não significa</th></tr></thead>
+      <tbody>
+        <tr><td><strong class="good">Preço acima da média</strong></td><td>O preço corrente está acima da média dos fechamentos dos últimos 21 pregões considerados.</td><td>Não significa, isoladamente, que seja uma compra ou que o preço continuará subindo.</td></tr>
+        <tr><td><strong class="bad">Preço abaixo da média</strong></td><td>O preço corrente está abaixo da referência de 21 pregões.</td><td>Não significa, isoladamente, que seja uma venda ou que o preço continuará caindo.</td></tr>
+        <tr><td><strong>Cruzamento</strong></td><td>O preço atravessou a média de baixo para cima ou de cima para baixo.</td><td>Não confirma por si só mudança de tendência.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Quadro de status</h2>
+  <p>Além das duas linhas, o indicador possui um pequeno quadro no canto superior direito com o preço, o valor da média e a distância percentual entre ambos. Esse quadro pode ser desligado nas configurações.</p>
+
+  <h2>Alertas</h2>
+  <p>O script já declara duas condições de alerta: <strong>cruzamento acima da média</strong> e <strong>cruzamento abaixo da média</strong>. Depois de adicionar o indicador ao gráfico, essas condições podem ser usadas na criação de alertas do TradingView.</p>
+
+  <h2>Instalação no TradingView</h2>
+  <ol class="steps">
+    <li>Abra um Supergráfico no TradingView.</li>
+    <li>Abra o <strong>Pine Editor</strong>.</li>
+    <li>Crie um <strong>Novo indicador</strong>.</li>
+    <li>Apague o conteúdo de exemplo.</li>
+    <li>Copie o código abaixo e cole no editor.</li>
+    <li>Salve com um nome como <code>Sino do Mercado — Preço x Média 21D</code>.</li>
+    <li>Clique em <strong>Adicionar ao gráfico</strong>.</li>
+    <li>O indicador aparecerá em uma janela separada abaixo do gráfico principal.</li>
+  </ol>
+
+  <section class="card code-wrap">
+    <div class="code-actions">
+      <button id="copyBtn" class="btn" type="button">Copiar código</button>
+      <a class="btn" href="tradingview-preco-media-21d.pine">Abrir .pine</a>
+    </div>
+    <pre id="pineCode">Carregando código Pine Script…</pre>
+  </section>
+
+  <h2>Configurações disponíveis</h2>
+  <div class="grid">
+    <div class="metric"><strong>21 pregões</strong><p>O período da média pode ser alterado de 2 a 252 pregões.</p></div>
+    <div class="metric"><strong>Somente dias encerrados</strong><p>Ativado por padrão para manter a referência estável durante o pregão atual.</p></div>
+    <div class="metric"><strong>Cores</strong><p>Cor da média, preço acima e preço abaixo podem ser personalizadas.</p></div>
+    <div class="metric"><strong>Espessura</strong><p>As duas linhas têm espessuras independentes configuráveis.</p></div>
+  </div>
+
+  <h2>Relação com os dados do Sino do Mercado</h2>
+  <div class="callout">
+    <p style="margin:0 0 8px"><strong>O indicador não importa os CSVs do Webapp para o TradingView.</strong></p>
+    <p style="margin:0">O Sino do Mercado usa CSVs para análises históricas de amplitude e comparação de faixas horárias. Já este indicador calcula a média e o preço diretamente a partir dos dados que o TradingView possui para o ativo aberto. Isso permite uso em tempo real sem precisar atualizar arquivos manualmente.</p>
+  </div>
+
+  <h2>Uso nos ativos do projeto</h2>
+  <p>O indicador usa <code>syminfo.tickerid</code>, portanto acompanha automaticamente o símbolo do gráfico em que for instalado. Ele pode ser usado em WIN, WDO, contratos de DI, EWZ ou outros ativos disponíveis na sua conta do TradingView.</p>
+
+  <footer>Indicador educacional do projeto Sino do Mercado. A posição do preço em relação a uma média não constitui recomendação de compra ou venda.</footer>
+</main>
+<script>
+(async()=>{
+  const el=document.getElementById('pineCode');
+  const btn=document.getElementById('copyBtn');
+  let code='';
+  try{
+    const r=await fetch('tradingview-preco-media-21d.pine',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    code=await r.text();
+    el.textContent=code;
+  }catch(e){
+    el.textContent='Não foi possível carregar o arquivo automaticamente. Use o botão “Abrir .pine”.';
+  }
+  btn.addEventListener('click',async()=>{
+    if(!code)return;
+    try{
+      await navigator.clipboard.writeText(code);
+      const old=btn.textContent;btn.textContent='Copiado ✓';
+      setTimeout(()=>btn.textContent=old,1600);
+    }catch{btn.textContent='Selecione e copie o código';}
+  });
+})();
+</script>
+</body>
+</html>
