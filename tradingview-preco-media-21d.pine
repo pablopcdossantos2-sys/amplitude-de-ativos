@@ -1,43 +1,85 @@
 //@version=6
-indicator("Sino do Mercado — Preço x Média 21D", shorttitle="Preço x Média 21D", overlay=false)
+indicator("Sino do Mercado — Preço x Média 21D + Faixas Estatísticas", shorttitle="Preço x Média 21D + Faixas", overlay=false)
 
 // ============================================================================
-// INDICADOR: PREÇO ATUAL x MÉDIA DOS ÚLTIMOS 21 PREGÕES
-// Projeto: Sino do Mercado
+// SINO DO MERCADO — PREÇO x MÉDIA 21D + FAIXAS ESTATÍSTICAS
+// Pine Script v6
 //
 // OBJETIVO
-// 1) Exibir o preço atual do ativo em uma janela independente.
-// 2) Exibir uma média simples calculada no timeframe diário.
-// 3) Mostrar visualmente se o preço está acima ou abaixo da média.
+// 1) Manter uma janela independente do gráfico principal.
+// 2) Plotar o preço atual e a SMA dos últimos N pregões diários.
+// 3) Medir a distância percentual atual entre preço e média.
+// 4) Comparar essa distância com sua distribuição histórica.
+// 5) Criar faixas estatísticas em torno da média:
+//      • Percentis: P25–P75 (central) e P5–P95 (externa), ou
+//      • Desvio-padrão: média histórica ±1σ e ±2σ.
+// 6) Mostrar z-score, zona estatística e alertas de afastamento extremo.
 //
-// OBSERVAÇÃO IMPORTANTE
-// Por padrão, a média usa somente pregões diários já encerrados.
-// Isso evita que o candle diário ainda em formação altere retroativamente
-// a referência durante o pregão.
+// IMPORTANTE
+// As estatísticas históricas usam somente pregões diários encerrados.
+// Isso reduz repainting e mantém a referência histórica estável.
 // ============================================================================
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PARÂMETROS ALTERÁVEIS PELO USUÁRIO
+// 1. PARÂMETROS DE CÁLCULO
 // ─────────────────────────────────────────────────────────────────────────────
-groupCalc = "Cálculo"
-lengthDays = input.int(21, "Número de pregões da média", minval=2, maxval=252, group=groupCalc)
-confirmedOnly = input.bool(true, "Usar somente pregões diários encerrados", group=groupCalc)
+groupCalc = "1. Cálculo"
+lengthDays = input.int(21, "Pregões da média", minval=2, maxval=252, group=groupCalc)
+statsLookback = input.int(252, "Pregões da amostra estatística", minval=30, maxval=1500, group=groupCalc)
+confirmedOnly = input.bool(true, "Média usa somente pregões encerrados", group=groupCalc)
 
-groupVisual = "Visual"
-avgColor = input.color(color.orange, "Cor da média", group=groupVisual)
+bandMode = input.string(
+    "Percentis",
+    "Modelo das faixas",
+    options=["Percentis", "Desvio-padrão"],
+    group=groupCalc,
+    tooltip="Percentis: faixa central P25–P75 e externa P5–P95. Desvio-padrão: média histórica da distância ±1σ e ±2σ."
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. PARÂMETROS VISUAIS
+// ─────────────────────────────────────────────────────────────────────────────
+groupVisual = "2. Visual"
+avgColor = input.color(color.orange, "Cor da média 21D", group=groupVisual)
 aboveColor = input.color(color.lime, "Preço acima da média", group=groupVisual)
 belowColor = input.color(color.red, "Preço abaixo da média", group=groupVisual)
+centralBandColor = input.color(color.teal, "Faixa central", group=groupVisual)
+outerBandColor = input.color(color.yellow, "Faixa intermediária", group=groupVisual)
 priceWidth = input.int(2, "Espessura da linha do preço", minval=1, maxval=5, group=groupVisual)
 avgWidth = input.int(2, "Espessura da linha da média", minval=1, maxval=5, group=groupVisual)
+showBands = input.bool(true, "Mostrar faixas estatísticas", group=groupVisual)
 showStatus = input.bool(true, "Mostrar quadro de status", group=groupVisual)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CÁLCULO DA MÉDIA DIÁRIA
+// 3. FUNÇÃO: DISTRIBUIÇÃO HISTÓRICA DA DISTÂNCIA PARA A MÉDIA
 // ─────────────────────────────────────────────────────────────────────────────
-// Média dos últimos N pregões já encerrados.
-// O [1] desloca o resultado em um candle diário.
-// lookahead_on é usado com esse deslocamento para manter o valor confirmado
-// consistente entre barras históricas e em tempo real.
+// Esta função é executada no contexto diário pelo request.security().
+//
+// Para cada pregão encerrado:
+// distância % = (fechamento - SMA) / SMA × 100
+//
+// Usamos close[1] e SMA[1] para trabalhar apenas com o último candle diário
+// confirmado. Em seguida, calculamos média, desvio e percentis da distância.
+f_distanceStats(int maLen, int sampleLen) =>
+    float basis = ta.sma(close, maLen)
+    float confirmedBasis = basis[1]
+    float confirmedDistance = not na(confirmedBasis) and confirmedBasis != 0
+         ? (close[1] - confirmedBasis) / confirmedBasis * 100
+         : na
+
+    float distMean = ta.sma(confirmedDistance, sampleLen)
+    float distStd = ta.stdev(confirmedDistance, sampleLen)
+    float p05 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 5)
+    float p25 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 25)
+    float p75 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 75)
+    float p95 = ta.percentile_nearest_rank(confirmedDistance, sampleLen, 95)
+
+    [distMean, distStd, p05, p25, p75, p95]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. MÉDIA DIÁRIA DE REFERÊNCIA
+// ─────────────────────────────────────────────────────────────────────────────
+// Versão confirmada e não-repainting: valor da SMA no último pregão encerrado.
 dailySmaConfirmed = request.security(
     syminfo.tickerid,
     "1D",
@@ -46,7 +88,7 @@ dailySmaConfirmed = request.security(
     lookahead=barmerge.lookahead_on
 )
 
-// Alternativa: inclui o candle diário atual ainda em formação.
+// Alternativa opcional: inclui o candle diário atual ainda em formação.
 dailySmaLive = request.security(
     syminfo.tickerid,
     "1D",
@@ -59,23 +101,119 @@ dailyAverage = confirmedOnly ? dailySmaConfirmed : dailySmaLive
 currentPrice = close
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POSIÇÃO DO PREÇO EM RELAÇÃO À MÉDIA
+// 5. ESTATÍSTICAS HISTÓRICAS CONFIRMADAS
 // ─────────────────────────────────────────────────────────────────────────────
-isAbove = not na(dailyAverage) and currentPrice >= dailyAverage
-priceColor = isAbove ? aboveColor : belowColor
-distance = currentPrice - dailyAverage
-distancePct = not na(dailyAverage) and dailyAverage != 0 ? (distance / dailyAverage) * 100 : na
+[histDistMean, histDistStd, histP05, histP25, histP75, histP95] = request.security(
+    syminfo.tickerid,
+    "1D",
+    f_distanceStats(lengthDays, statsLookback),
+    gaps=barmerge.gaps_off,
+    lookahead=barmerge.lookahead_on
+)
+
+// Distância atual do preço em relação à média diária.
+currentDistancePct = not na(dailyAverage) and dailyAverage != 0
+     ? (currentPrice - dailyAverage) / dailyAverage * 100
+     : na
+
+// Z-score mede quão distante o valor atual está da distribuição histórica.
+zScore = not na(histDistStd) and histDistStd > 0 and not na(currentDistancePct)
+     ? (currentDistancePct - histDistMean) / histDistStd
+     : na
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DUAS LINHAS PRINCIPAIS DO INDICADOR
+// 6. LIMITES DAS FAIXAS EM PERCENTUAL
 // ─────────────────────────────────────────────────────────────────────────────
-plot(dailyAverage, "Média diária", color=avgColor, linewidth=avgWidth)
-plot(currentPrice, "Preço atual", color=priceColor, linewidth=priceWidth)
+// Percentis:
+//   central = P25 a P75
+//   externa = P5 a P95
+//
+// Desvio-padrão:
+//   central = média histórica ±1σ
+//   externa = média histórica ±2σ
+innerLowerPct = bandMode == "Percentis" ? histP25 : histDistMean - histDistStd
+innerUpperPct = bandMode == "Percentis" ? histP75 : histDistMean + histDistStd
+outerLowerPct = bandMode == "Percentis" ? histP05 : histDistMean - 2.0 * histDistStd
+outerUpperPct = bandMode == "Percentis" ? histP95 : histDistMean + 2.0 * histDistStd
+
+// Converte distância percentual para o mesmo eixo de preço do painel.
+innerLowerPrice = not na(dailyAverage) and not na(innerLowerPct)
+     ? dailyAverage * (1.0 + innerLowerPct / 100.0)
+     : na
+innerUpperPrice = not na(dailyAverage) and not na(innerUpperPct)
+     ? dailyAverage * (1.0 + innerUpperPct / 100.0)
+     : na
+outerLowerPrice = not na(dailyAverage) and not na(outerLowerPct)
+     ? dailyAverage * (1.0 + outerLowerPct / 100.0)
+     : na
+outerUpperPrice = not na(dailyAverage) and not na(outerUpperPct)
+     ? dailyAverage * (1.0 + outerUpperPct / 100.0)
+     : na
 
 // ─────────────────────────────────────────────────────────────────────────────
-// QUADRO DE STATUS
+// 7. CLASSIFICAÇÃO DA POSIÇÃO ATUAL
 // ─────────────────────────────────────────────────────────────────────────────
-var table statusTable = table.new(position.top_right, 2, 4, border_width=1)
+statsReady = not na(innerLowerPct) and not na(innerUpperPct) and not na(outerLowerPct) and not na(outerUpperPct)
+isAboveAverage = not na(dailyAverage) and currentPrice >= dailyAverage
+priceColor = isAboveAverage ? aboveColor : belowColor
+
+string zoneText = "Sem histórico suficiente"
+color zoneColor = color.gray
+
+if statsReady and not na(currentDistancePct)
+    if currentDistancePct > outerUpperPct
+        zoneText := "Extremo acima"
+        zoneColor := color.red
+    else if currentDistancePct < outerLowerPct
+        zoneText := "Extremo abaixo"
+        zoneColor := color.red
+    else if currentDistancePct > innerUpperPct
+        zoneText := "Intermediário acima"
+        zoneColor := color.yellow
+    else if currentDistancePct < innerLowerPct
+        zoneText := "Intermediário abaixo"
+        zoneColor := color.yellow
+    else
+        zoneText := "Faixa central"
+        zoneColor := color.teal
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. PLOTS PRINCIPAIS
+// ─────────────────────────────────────────────────────────────────────────────
+avgPlot = plot(dailyAverage, "Média diária", color=avgColor, linewidth=avgWidth)
+pricePlot = plot(currentPrice, "Preço atual", color=priceColor, linewidth=priceWidth)
+
+outerUpperPlot = plot(showBands ? outerUpperPrice : na, "Limite externo superior", color=color.new(outerBandColor, 25), linewidth=1)
+innerUpperPlot = plot(showBands ? innerUpperPrice : na, "Limite central superior", color=color.new(centralBandColor, 10), linewidth=1)
+innerLowerPlot = plot(showBands ? innerLowerPrice : na, "Limite central inferior", color=color.new(centralBandColor, 10), linewidth=1)
+outerLowerPlot = plot(showBands ? outerLowerPrice : na, "Limite externo inferior", color=color.new(outerBandColor, 25), linewidth=1)
+
+// Área historicamente mais comum.
+fill(
+    innerUpperPlot,
+    innerLowerPlot,
+    color=showBands ? color.new(centralBandColor, 88) : na,
+    title="Faixa central"
+)
+
+// Regiões intermediárias entre a faixa central e a externa.
+fill(
+    outerUpperPlot,
+    innerUpperPlot,
+    color=showBands ? color.new(outerBandColor, 91) : na,
+    title="Faixa intermediária superior"
+)
+fill(
+    innerLowerPlot,
+    outerLowerPlot,
+    color=showBands ? color.new(outerBandColor, 91) : na,
+    title="Faixa intermediária inferior"
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9. QUADRO DE STATUS
+// ─────────────────────────────────────────────────────────────────────────────
+var table statusTable = table.new(position.top_right, 2, 7, border_width=1)
 
 if barstate.islast
     if showStatus
@@ -93,17 +231,53 @@ if barstate.islast
             statusTable,
             1,
             3,
-            na(distancePct) ? "—" : str.tostring(distancePct, "#.##") + "%",
+            na(currentDistancePct) ? "—" : str.tostring(currentDistancePct, "#.##") + "%",
             text_color=priceColor
         )
+
+        table.cell(statusTable, 0, 4, "Z-score")
+        table.cell(
+            statusTable,
+            1,
+            4,
+            na(zScore) ? "—" : str.tostring(zScore, "#.##"),
+            text_color=zoneColor
+        )
+
+        table.cell(statusTable, 0, 5, "Zona")
+        table.cell(statusTable, 1, 5, zoneText, text_color=zoneColor)
+
+        table.cell(statusTable, 0, 6, "Amostra")
+        table.cell(statusTable, 1, 6, str.tostring(statsLookback) + " pregões")
     else
-        table.clear(statusTable, 0, 0, 1, 3)
+        table.clear(statusTable, 0, 0, 1, 6)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ALERTAS OPCIONAIS
+// 10. ALERTAS
 // ─────────────────────────────────────────────────────────────────────────────
-crossedAbove = ta.crossover(currentPrice, dailyAverage)
-crossedBelow = ta.crossunder(currentPrice, dailyAverage)
+crossedAboveAverage = ta.crossover(currentPrice, dailyAverage)
+crossedBelowAverage = ta.crossunder(currentPrice, dailyAverage)
 
-alertcondition(crossedAbove, "Preço cruzou acima da média", "O preço cruzou acima da média diária configurada.")
-alertcondition(crossedBelow, "Preço cruzou abaixo da média", "O preço cruzou abaixo da média diária configurada.")
+enteredUpperExtreme = statsReady and ta.crossover(currentPrice, outerUpperPrice)
+enteredLowerExtreme = statsReady and ta.crossunder(currentPrice, outerLowerPrice)
+
+alertcondition(
+    crossedAboveAverage,
+    "Preço cruzou acima da média",
+    "O preço cruzou acima da média diária configurada."
+)
+alertcondition(
+    crossedBelowAverage,
+    "Preço cruzou abaixo da média",
+    "O preço cruzou abaixo da média diária configurada."
+)
+alertcondition(
+    enteredUpperExtreme,
+    "Preço entrou em extremo superior",
+    "O preço ultrapassou o limite estatístico externo superior."
+)
+alertcondition(
+    enteredLowerExtreme,
+    "Preço entrou em extremo inferior",
+    "O preço ultrapassou o limite estatístico externo inferior."
+)
