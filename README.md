@@ -54,15 +54,30 @@ Neste modo, cada candle é uma observação independente.
 
 Útil para comparar períodos ou ativos em escalas de preço diferentes.
 
+## Comparador de faixas horárias
+
+O Webapp possui um painel para comparar até quatro intervalos do pregão simultaneamente. Os valores padrão são:
+
+- 09:00–09:30;
+- 09:30–10:00;
+- 10:00–11:00;
+- 11:00–12:00.
+
+Cada faixa é configurável. O painel desenha curvas de densidade empírica suavizada (KDE) e apresenta, lado a lado, amostra, média, mediana, P75, P95 e maior amplitude. Assim é possível visualizar em quais horários o ativo historicamente tende a expandir mais.
+
 ## Estatísticas apresentadas
 
 O Webapp calcula média, mediana, desvio-padrão, assimetria, curtose excedente, percentis 5%, 25%, 75% e 95%, menor e maior amplitude, tamanho da amostra e frequência histórica acima ou abaixo de um limiar escolhido.
 
 A curva normal ajustada é mostrada apenas como **referência visual**. Amplitudes são não negativas e não precisam seguir distribuição normal; o histograma dos dados observados é a informação principal.
 
-## Dados
+## Dados reais
 
-O Webapp importa CSVs OHLCV exportados do TradingView ou de outra fonte compatível. O parser procura colunas equivalentes a `time/date`, `open`, `high`, `low`, `close` e `volume` (opcional). Os arquivos são processados no próprio navegador.
+O Webapp importa CSVs OHLCV exportados do TradingView, Profit/Nelogica ou outra fonte compatível. O parser procura colunas equivalentes a `time/date`, `open`, `high`, `low`, `close` e `volume` (opcional). Os arquivos são processados no próprio navegador.
+
+É possível escolher entre **Substituir os dados deste ativo** e **Adicionar/mesclar ao histórico**. No modo de mesclagem, vários CSVs de períodos diferentes são combinados, ordenados por timestamp e deduplicados automaticamente.
+
+Tutorial completo: https://pablopcdossantos2-sys.github.io/variacoes-graficos/tutorial-dados.html
 
 > A demonstração incluída no Webapp usa dados sintéticos intradiários apenas para explicar a interface.
 
@@ -86,9 +101,14 @@ Depois abra `http://localhost:8000`.
 
 O repositório inclui `.github/workflows/pages.yml`. Em **Settings → Pages**, configure **Source** como **GitHub Actions**. Depois disso, commits na branch `main` publicam automaticamente a nova versão.
 
-## Dados da B3
+## Fontes sugeridas
 
-O projeto não automatiza coleta do site da B3. Para WIN, WDO e DI, utilize uma fonte de dados que você tenha direito de usar e importe o CSV correspondente.
+- **TradingView:** exporta para CSV os dados carregados no gráfico e é uma rota prática para WIN, WDO, DI e EWZ;
+- **Profit/Nelogica:** possui exportação de dados históricos OHLCV para ativos da B3;
+- **Base Histórica Nelogica:** alternativa comercial para históricos intradiários mais extensos;
+- **B3:** fonte oficial útil para histórico, boletins, ajustes e resumos, embora a área pública não seja uma fonte direta de candles intradiários de 1/5 minuto para este projeto.
+
+O projeto não automatiza coleta do site da B3. Utilize apenas dados aos quais você tenha direito de acesso e uso.
 
 ## Aviso
 
