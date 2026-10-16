@@ -65,22 +65,49 @@ O Webapp possui um painel para comparar até quatro intervalos do pregão simult
 
 Cada faixa é configurável. O painel desenha curvas de densidade empírica suavizada (KDE) e apresenta, lado a lado, amostra, média, mediana, P75, P95 e maior amplitude. Assim é possível visualizar em quais horários o ativo historicamente tende a expandir mais.
 
-## Indicador TradingView — Preço x Média 21D
+## Indicador TradingView — Preço x Média 21D + Faixas Estatísticas
 
-O projeto também inclui um indicador em Pine Script v6 para uso diretamente no TradingView.
+O projeto inclui um indicador em Pine Script v6 para uso diretamente no TradingView.
 
-Ele abre em uma **janela independente do gráfico de preço** e apresenta duas linhas:
+Ele abre em uma **janela independente do gráfico de preço** e mantém as duas referências originais:
 
 - **Média 21D:** SMA dos últimos 21 pregões diários; por padrão, usa apenas pregões já encerrados;
 - **Preço atual:** acompanha o preço corrente e muda de cor conforme esteja acima ou abaixo da média.
 
-O indicador também mostra um quadro com preço, média e distância percentual, além de condições de alerta para cruzamentos acima e abaixo da referência.
+A versão atual também mede a **distância percentual do preço para a média** e compara essa distância com sua própria distribuição histórica, usando uma amostra padrão de **252 pregões**.
+
+### Faixas estatísticas
+
+O usuário pode escolher dois modelos:
+
+- **Percentis (padrão):** P25–P75 como faixa central e P5–P95 como faixa externa;
+- **Desvio-padrão:** média histórica da distância ±1σ como faixa central e ±2σ como faixa externa.
+
+O indicador classifica automaticamente a posição atual como:
+
+- faixa central;
+- intermediário acima;
+- intermediário abaixo;
+- extremo acima;
+- extremo abaixo.
+
+Também apresenta o **z-score** da distância atual e um quadro com preço, média, distância percentual, z-score, zona e tamanho da amostra.
+
+### Alertas
+
+Há condições de alerta para:
+
+- cruzamento acima da média;
+- cruzamento abaixo da média;
+- entrada em extremo superior;
+- entrada em extremo inferior.
 
 Página explicativa: https://pablopcdossantos2-sys.github.io/variacoes-graficos/indicador-media-21d.html
 
 Código Pine: `tradingview-preco-media-21d.pine`
 
 > O Pine Script não importa os CSVs locais do Webapp. Ele recalcula o conceito diretamente com os dados disponíveis no TradingView para o símbolo aberto. Os CSVs permanecem destinados às análises históricas do Sino do Mercado.
+
 
 ## Estatísticas apresentadas
 
