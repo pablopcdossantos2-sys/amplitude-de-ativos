@@ -65,6 +65,23 @@ O Webapp possui um painel para comparar até quatro intervalos do pregão simult
 
 Cada faixa é configurável. O painel desenha curvas de densidade empírica suavizada (KDE) e apresenta, lado a lado, amostra, média, mediana, P75, P95 e maior amplitude. Assim é possível visualizar em quais horários o ativo historicamente tende a expandir mais.
 
+## Indicador TradingView — Preço x Média 21D
+
+O projeto também inclui um indicador em Pine Script v6 para uso diretamente no TradingView.
+
+Ele abre em uma **janela independente do gráfico de preço** e apresenta duas linhas:
+
+- **Média 21D:** SMA dos últimos 21 pregões diários; por padrão, usa apenas pregões já encerrados;
+- **Preço atual:** acompanha o preço corrente e muda de cor conforme esteja acima ou abaixo da média.
+
+O indicador também mostra um quadro com preço, média e distância percentual, além de condições de alerta para cruzamentos acima e abaixo da referência.
+
+Página explicativa: https://pablopcdossantos2-sys.github.io/variacoes-graficos/indicador-media-21d.html
+
+Código Pine: `tradingview-preco-media-21d.pine`
+
+> O Pine Script não importa os CSVs locais do Webapp. Ele recalcula o conceito diretamente com os dados disponíveis no TradingView para o símbolo aberto. Os CSVs permanecem destinados às análises históricas do Sino do Mercado.
+
 ## Estatísticas apresentadas
 
 O Webapp calcula média, mediana, desvio-padrão, assimetria, curtose excedente, percentis 5%, 25%, 75% e 95%, menor e maior amplitude, tamanho da amostra e frequência histórica acima ou abaixo de um limiar escolhido.
