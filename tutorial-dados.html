@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Tutorial para obter, preparar e importar dados reais no Sino do Mercado.">
+<title>Dados reais — Sino do Mercado</title>
+<style>
+:root{color-scheme:dark;--bg:#07101f;--card:#0f1c31;--text:#f3f6fb;--muted:#9cadc2;--line:rgba(148,163,184,.18);--accent:#60a5fa;--accent2:#22d3ee;--good:#34d399;--warn:#fbbf24}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% -10%,rgba(37,99,235,.2),transparent 28%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.65}
+main{max-width:1040px;margin:auto;padding:32px 20px 70px}.top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:28px}.back{color:var(--accent2);text-decoration:none;font-weight:700}.eyebrow{color:var(--accent2);text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:800}h1{font-size:clamp(34px,6vw,58px);line-height:1.02;letter-spacing:-.05em;margin:8px 0 12px}h2{margin-top:34px;font-size:25px}h3{margin-top:24px}.lead{color:var(--muted);max-width:850px;font-size:18px}.card{background:rgba(15,28,49,.94);border:1px solid var(--line);border-radius:18px;padding:20px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.source{padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.tag{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted)}.good{color:var(--good)}.warn{color:var(--warn)}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{background:#13233c;padding:2px 5px;border-radius:5px}pre{overflow:auto;background:#091424;border:1px solid var(--line);padding:14px;border-radius:12px;color:#dce8f8}.steps li{margin:8px 0}.callout{border-left:4px solid var(--warn);background:rgba(251,191,36,.08);padding:12px 15px;border-radius:8px}.ok{border-left-color:var(--good);background:rgba(52,211,153,.07)}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted)}a{color:#7dd3fc}.small{color:var(--muted);font-size:13px}footer{color:var(--muted);font-size:12px;margin-top:46px;padding-top:18px;border-top:1px solid var(--line)}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.top{display:block}.top .back{display:inline-block;margin-top:14px}table{font-size:12px}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <div class="eyebrow">Sino do Mercado • Guia de dados</div>
+      <h1>Como adicionar dados reais</h1>
+      <p class="lead">O Webapp precisa de candles OHLC. Você pode começar com um único CSV e depois acrescentar arquivos de outros períodos sem juntar nada manualmente.</p>
+    </div>
+    <a class="back" href="index.html">← Voltar ao Webapp</a>
+  </div>
+
+  <section class="card">
+    <h2 style="margin-top:0">O formato de que a ferramenta precisa</h2>
+    <p>Cada linha deve representar um candle e conter, no mínimo, data/hora, abertura, máxima, mínima e fechamento. Volume é opcional.</p>
+    <pre>time,open,high,low,close,volume
+2026-10-01 09:00:00,145120,145380,145060,145310,18240
+2026-10-01 09:05:00,145310,145520,145250,145480,21470</pre>
+    <p>O parser aceita nomes equivalentes a <code>time/date</code>, <code>open</code>, <code>high</code>, <code>low</code>, <code>close</code> e <code>volume</code>. Colunas extras são ignoradas.</p>
+    <div class="callout ok"><strong>Para estudar faixas horárias, prefira candles de 1 ou 5 minutos.</strong> Um arquivo diário não permite reconstruir o que ocorreu entre 09:00 e 10:00.</div>
+  </section>
+
+  <h2>1. TradingView — caminho mais simples</h2>
+  <p>O TradingView permite baixar em CSV os dados que estão carregados no Supergráfico. A documentação oficial alerta que o arquivo contém aquilo que o gráfico já carregou; para obter mais histórico, role o gráfico para a esquerda/carregue períodos anteriores antes de exportar.</p>
+
+  <div class="grid">
+    <div class="source">
+      <span class="tag good">WINFUT</span>
+      <h3>Mini índice</h3>
+      <p>Para uma série contínua, procure <code>BMFBOVESPA:WIN1!</code>. Para estudos mais rigorosos de vencimento, também é possível trabalhar com contratos individuais.</p>
+    </div>
+    <div class="source">
+      <span class="tag good">WDOFUT</span>
+      <h3>Mini dólar</h3>
+      <p>Para uma série contínua, procure <code>BMFBOVESPA:WDO1!</code>. Contratos individuais também podem ser exportados.</p>
+    </div>
+    <div class="source">
+      <span class="tag good">DI1FUT</span>
+      <h3>DI futuro</h3>
+      <p>Escolha o vencimento que deseja estudar, por exemplo um <code>DI1F...</code> específico. O TradingView também possui uma série contínua identificada como <code>DI11!</code>.</p>
+    </div>
+    <div class="source">
+      <span class="tag good">EWZ</span>
+      <h3>iShares MSCI Brazil ETF</h3>
+      <p>No TradingView, o símbolo é <code>AMEX:EWZ</code>.</p>
+    </div>
+  </div>
+
+  <ol class="steps">
+    <li>Abra o ativo no Supergráfico.</li>
+    <li>Selecione <strong>1 minuto</strong> ou <strong>5 minutos</strong> se pretende comparar faixas intradiárias.</li>
+    <li>Carregue no gráfico o período histórico que quer estudar. Role para a esquerda se precisar buscar mais candles.</li>
+    <li>No menu do gráfico, escolha <strong>Baixar os dados do gráfico…</strong>.</li>
+    <li>Salve o CSV.</li>
+    <li>No Sino do Mercado, selecione o ativo correspondente e importe o arquivo.</li>
+  </ol>
+
+  <div class="callout"><strong>Contratos contínuos:</strong> são muito práticos para obter uma série longa, mas envolvem troca de vencimentos. Se seu estudo exigir fidelidade contrato a contrato, exporte os vencimentos individuais e organize a transição de forma consistente.</div>
+
+  <p class="small">Documentação oficial: <a href="https://www.tradingview.com/support/solutions/43000537255-how-to-export-chart-data/" target="_blank" rel="noopener">TradingView — How to export chart data</a>.</p>
+
+  <h2>2. Profit / Nelogica — muito útil para B3</h2>
+  <p>O Profit possui a opção <strong>Exportar Dados Históricos</strong>. A documentação da Nelogica informa que a exportação padrão inclui ativo/data, abertura, máxima, mínima, fechamento e volumes — exatamente o tipo de informação de que o Sino do Mercado precisa.</p>
+  <ol class="steps">
+    <li>No Profit, abra o menu principal.</li>
+    <li>Escolha <strong>Exportar Dados Históricos</strong>.</li>
+    <li>Adicione o ativo desejado.</li>
+    <li>Escolha o período temporal apropriado; para estudos intradiários, prefira 1 ou 5 minutos quando disponível.</li>
+    <li>Escolha a pasta de destino e exporte.</li>
+    <li>Importe o CSV resultante no Sino do Mercado.</li>
+  </ol>
+  <p>A ajuda oficial da Nelogica informa atualmente que, para intervalos temporais, há até dois anos de histórico sujeito aos limites de candles da versão: Profit Ultra/Automação Premium até 100.000, Pro até 50.000 e Plus até 20.000 candles.</p>
+  <p class="small">Documentação oficial: <a href="https://ajuda.nelogica.com.br/hc/pt-br/articles/360044287672-Como-exportar-dados-hist%C3%B3ricos-de-ativos-para-o-Excel" target="_blank" rel="noopener">Como exportar dados históricos de ativos para o Excel</a>.</p>
+
+  <h2>3. Como juntar vários períodos no próprio Webapp</h2>
+  <section class="card">
+    <p>Não é necessário abrir Excel nem concatenar os CSVs.</p>
+    <ol class="steps">
+      <li>Importe o primeiro arquivo normalmente.</li>
+      <li>Na seção <strong>Dados</strong>, altere <strong>Ao importar outro CSV</strong> para <strong>Adicionar/mesclar ao histórico</strong>.</li>
+      <li>Importe o segundo arquivo, depois o terceiro, e assim por diante.</li>
+      <li>O Webapp ordena os candles por timestamp e remove duplicatas automaticamente. Se um timestamp aparecer novamente, os dados do arquivo recém-importado substituem aquela linha.</li>
+    </ol>
+    <p><strong>Exemplo:</strong> você pode importar <code>WIN_2024.csv</code>, depois <code>WIN_2025.csv</code> e finalmente <code>WIN_2026.csv</code>. A análise passa a enxergar um único histórico combinado.</p>
+  </section>
+
+  <h2>4. Qual granularidade usar?</h2>
+  <table>
+    <thead><tr><th>Análise desejada</th><th>CSV recomendado</th><th>Observação</th></tr></thead>
+    <tbody>
+      <tr><td>09:00–09:15</td><td>1 ou 5 min</td><td>Quanto menor o candle, mais fiel a máxima e mínima dentro da faixa.</td></tr>
+      <tr><td>09:00–10:00</td><td>1, 5 ou 15 min</td><td>1/5 min é preferível para maior precisão.</td></tr>
+      <tr><td>Candles de 30 min</td><td>30 min ou menor</td><td>O Webapp consegue agregar dados menores para 30 min.</td></tr>
+      <tr><td>Amplitude diária</td><td>Diário ou intradiário</td><td>Dados diários já bastam se você não precisa saber o comportamento dentro do pregão.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Fontes e limitações</h2>
+  <table>
+    <thead><tr><th>Fonte</th><th>Serve para</th><th>Pontos de atenção</th></tr></thead>
+    <tbody>
+      <tr><td><strong>TradingView</strong></td><td>WIN, WDO, DI e EWZ; intradiário e diário conforme acesso aos dados.</td><td>Exporta o que foi carregado no gráfico. Disponibilidade depende do plano e dos dados/bolsas disponíveis na conta.</td></tr>
+      <tr><td><strong>Profit / Nelogica</strong></td><td>Principalmente ativos B3, com OHLCV exportável.</td><td>Janela e número de candles dependem da versão e do produto contratado.</td></tr>
+      <tr><td><strong>Base Histórica Nelogica</strong></td><td>Históricos extensos em Daily, Intraday e Tick by Tick.</td><td>É um produto de dados separado/comercial. A documentação cita intraday de WIN/WDO desde 2012.</td></tr>
+      <tr><td><strong>B3 — Histórico oficial</strong></td><td>Cotações históricas, boletins, ajustes e resumos oficiais.</td><td>É excelente como fonte oficial, mas as páginas públicas de histórico não são uma solução direta para candles intradiários de 1/5 min usados neste Webapp.</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Referências: <a href="https://ajuda.nelogica.com.br/hc/pt-br/articles/11169188636443-Disponibilidade-de-Dados-Hist%C3%B3ricos-para-exporta%C3%A7%C3%A3o-em-CSV" target="_blank" rel="noopener">Nelogica — disponibilidade histórica</a> · <a href="https://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/" target="_blank" rel="noopener">B3 — Histórico</a>.</p>
+
+  <h2>6. Atenção ao horário e fuso</h2>
+  <div class="callout">
+    <p style="margin:0">O comparador usa os horários presentes no timestamp do CSV interpretados pelo navegador. Antes de analisar 09:00–10:00, confirme que o arquivo está no fuso esperado. Isso é especialmente importante ao comparar B3 com EWZ, que negocia nos Estados Unidos e sofre mudanças sazonais de horário.</p>
+  </div>
+
+  <h2>7. Checklist antes de confiar no gráfico</h2>
+  <ul class="steps">
+    <li>Confirme se o CSV é realmente do ativo selecionado.</li>
+    <li>Confirme a granularidade do arquivo.</li>
+    <li>Confira o primeiro e o último dia carregados.</li>
+    <li>Verifique se existem buracos grandes no histórico.</li>
+    <li>Confira o fuso horário.</li>
+    <li>Para futuros, decida se quer contrato contínuo ou vencimentos individuais.</li>
+    <li>Use a curva de sino apenas como referência; a distribuição empírica observada é o dado principal.</li>
+  </ul>
+
+  <footer>
+    Tutorial do projeto Sino do Mercado. As fontes e limites de dados podem mudar com o tempo; consulte sempre a documentação do provedor.
+  </footer>
+</main>
+</body>
+</html>
