@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Indicador TradingView do Sino do Mercado: preço atual, média de 21 pregões, distância percentual, z-score e faixas estatísticas.">
-<title>Preço x Média 21D + Faixas Estatísticas — Sino do Mercado</title>
+<meta name="description" content="Indicador Contexto Estatístico 21D do Sino do Mercado para TradingView: percentil, ATR, regimes, estudo pós-extremo e comparação WIN/WDO/DI/EWZ.">
+<title>Contexto Estatístico 21D — Sino do Mercado</title>
 <style>
 :root{color-scheme:dark;--bg:#07101f;--card:#0f1c31;--card2:#13233c;--text:#f3f6fb;--muted:#9cadc2;--line:rgba(148,163,184,.18);--accent:#60a5fa;--cyan:#22d3ee;--good:#34d399;--bad:#fb7185;--warn:#fbbf24;--teal:#2dd4bf}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 10% -10%,rgba(37,99,235,.2),transparent 28%),radial-gradient(circle at 92% 8%,rgba(34,211,238,.08),transparent 24%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.65}
-main{max-width:1120px;margin:auto;padding:30px 20px 70px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:30px}.nav{display:flex;gap:10px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px 13px;font-weight:700;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--accent),var(--cyan));color:white;border-color:transparent}.eyebrow{color:var(--cyan);text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:800}h1{font-size:clamp(34px,6vw,58px);line-height:1.02;letter-spacing:-.05em;margin:8px 0 12px}h2{margin-top:36px;font-size:26px}h3{margin-top:22px}.lead{color:var(--muted);max-width:900px;font-size:18px}.card{background:rgba(15,28,49,.94);border:1px solid var(--line);border-radius:18px;padding:20px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.metric{padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.metric strong{display:block;font-size:24px;margin-top:4px}.muted{color:var(--muted)}.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}.teal{color:var(--teal)}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{background:var(--card2);padding:2px 5px;border-radius:5px}.code-wrap{position:relative}.code-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}pre{overflow:auto;max-height:720px;background:#06101d;border:1px solid var(--line);padding:16px;border-radius:14px;color:#dce8f8;font-size:13px;line-height:1.5;white-space:pre}.callout{border-left:4px solid var(--warn);background:rgba(251,191,36,.08);padding:13px 15px;border-radius:8px}.callout.ok{border-left-color:var(--good);background:rgba(52,211,153,.07)}.steps li{margin:8px 0}.demo{padding:18px}.demo-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:12px}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.dot.avg{background:var(--warn)}.dot.price{background:var(--good)}.dot.central{background:var(--teal)}.dot.outer{background:#fde68a}svg{width:100%;height:auto;display:block;background:#081424;border:1px solid var(--line);border-radius:14px}.axis{stroke:rgba(148,163,184,.18);stroke-width:1}.avgline{fill:none;stroke:#fbbf24;stroke-width:3}.priceline{fill:none;stroke:#34d399;stroke-width:3}.centralBand{fill:rgba(45,212,191,.14)}.outerBand{fill:rgba(251,191,36,.09)}.bandLine{fill:none;stroke:rgba(251,191,36,.65);stroke-width:1.3;stroke-dasharray:6 5}.innerLine{fill:none;stroke:rgba(45,212,191,.8);stroke-width:1.3}.status{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.status>div{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px}.status span{display:block;color:var(--muted);font-size:11px}.status strong{font-size:17px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted)}footer{color:var(--muted);font-size:12px;margin-top:46px;padding-top:18px;border-top:1px solid var(--line)}
-@media(max-width:760px){.grid{grid-template-columns:1fr}.top{display:block}.nav{margin-top:16px}.status{grid-template-columns:1fr 1fr}.demo-head{display:block}.legend{margin-top:8px}}
-@media(max-width:480px){.status{grid-template-columns:1fr}}
+main{max-width:1180px;margin:auto;padding:30px 20px 70px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:30px}.nav{display:flex;gap:10px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px 13px;font-weight:700;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--accent),var(--cyan));color:white;border-color:transparent}.eyebrow{color:var(--cyan);text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:800}h1{font-size:clamp(34px,6vw,62px);line-height:1.02;letter-spacing:-.05em;margin:8px 0 12px}h2{margin-top:40px;font-size:27px}h3{margin-top:22px}.lead{color:var(--muted);max-width:920px;font-size:18px}.card{background:rgba(15,28,49,.94);border:1px solid var(--line);border-radius:18px;padding:20px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.metric{padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.metric strong{display:block;font-size:22px;margin-top:4px}.muted{color:var(--muted)}.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}.teal{color:var(--teal)}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{background:var(--card2);padding:2px 5px;border-radius:5px}.code-wrap{position:relative}.code-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}pre{overflow:auto;max-height:720px;background:#06101d;border:1px solid var(--line);padding:16px;border-radius:14px;color:#dce8f8;font-size:13px;line-height:1.5;white-space:pre}.callout{border-left:4px solid var(--warn);background:rgba(251,191,36,.08);padding:13px 15px;border-radius:8px}.callout.ok{border-left-color:var(--good);background:rgba(52,211,153,.07)}.steps li{margin:8px 0}.hero-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}.hero-metrics div{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px}.hero-metrics span{display:block;color:var(--muted);font-size:11px}.hero-metrics strong{font-size:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted)}.pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px}.feature-list{counter-reset:item;display:grid;gap:10px}.feature{padding:15px 16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02)}.feature:before{counter-increment:item;content:counter(item);display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:rgba(96,165,250,.16);color:#93c5fd;font-weight:800;margin-right:8px}.feature strong{font-size:16px}.feature p{margin:7px 0 0;color:var(--muted)}footer{color:var(--muted);font-size:12px;margin-top:46px;padding-top:18px;border-top:1px solid var(--line)}
+@media(max-width:850px){.grid,.grid3{grid-template-columns:1fr}.hero-metrics{grid-template-columns:1fr 1fr}.top{display:block}.nav{margin-top:16px}}
+@media(max-width:480px){.hero-metrics{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -18,8 +18,8 @@ main{max-width:1120px;margin:auto;padding:30px 20px 70px}.top{display:flex;justi
 <header class="top">
   <div>
     <div class="eyebrow">TradingView • Pine Script v6</div>
-    <h1>Preço x Média 21D + Faixas Estatísticas</h1>
-    <p class="lead">O indicador agora combina a referência de 21 pregões com a distribuição histórica da distância entre preço e média, ajudando a distinguir um afastamento comum de um afastamento estatisticamente incomum.</p>
+    <h1>Contexto Estatístico 21D</h1>
+    <p class="lead">Uma evolução do indicador Preço x Média 21D: além da localização do preço, ele mede quão raro é o afastamento atual, em qual regime de mercado ocorre e o que historicamente aconteceu depois de afastamentos extremos.</p>
   </div>
   <nav class="nav">
     <a class="btn" href="index.html">← Sino do Mercado</a>
@@ -29,115 +29,152 @@ main{max-width:1120px;margin:auto;padding:30px 20px 70px}.top{display:flex;justi
 </header>
 
 <section class="card">
-  <div class="eyebrow">Núcleo do indicador</div>
-  <h2 style="margin-top:7px">O que é calculado</h2>
-  <div class="grid">
-    <div class="metric"><span class="muted">Referência</span><strong class="warn">Média 21D</strong><p>SMA dos últimos 21 pregões diários. Por padrão usa somente pregões já encerrados.</p></div>
-    <div class="metric"><span class="muted">Mercado agora</span><strong class="good">Preço atual</strong><p>A linha acompanha o preço e muda de cor conforme esteja acima ou abaixo da média.</p></div>
-    <div class="metric"><span class="muted">Afastamento</span><strong>Distância %</strong><p><code>(Preço − Média) / Média × 100</code>. Mostra quanto o preço se afastou da referência em termos relativos.</p></div>
-    <div class="metric"><span class="muted">Padronização</span><strong>Z-score</strong><p>Mostra quantos desvios-padrão a distância atual está afastada da média histórica dessa distância.</p></div>
+  <div class="eyebrow">Leitura rápida</div>
+  <h2 style="margin-top:7px">Exemplo do que o quadro pode mostrar</h2>
+  <div class="hero-metrics">
+    <div><span>Distância</span><strong>+1,83%</strong></div>
+    <div><span>Percentil</span><strong class="warn">P91</strong></div>
+    <div><span>Distância / ATR</span><strong>+0,94 ATR</strong></div>
+    <div><span>Z-score</span><strong>+1,42</strong></div>
+    <div><span>Zona</span><strong class="warn">Intermediário acima</strong></div>
+    <div><span>Volatilidade</span><strong>Alta</strong></div>
+    <div><span>Média 21D</span><strong class="good">Ascendente</strong></div>
+    <div><span>Persistência</span><strong>2 pregões</strong></div>
   </div>
 </section>
 
-<section class="card demo">
-  <div class="demo-head">
-    <div>
-      <div class="eyebrow">Ilustração conceitual</div>
-      <h2 style="margin:5px 0 0">Preço, média e zonas históricas</h2>
-    </div>
-    <div class="legend">
-      <span><i class="dot avg"></i>Média 21D</span>
-      <span><i class="dot price"></i>Preço</span>
-      <span><i class="dot central"></i>Faixa central</span>
-      <span><i class="dot outer"></i>Faixa intermediária</span>
-    </div>
-  </div>
-  <svg viewBox="0 0 900 360" role="img" aria-label="Exemplo de preço, média de 21 dias e faixas estatísticas">
-    <line class="axis" x1="55" y1="55" x2="855" y2="55"/><line class="axis" x1="55" y1="135" x2="855" y2="135"/><line class="axis" x1="55" y1="215" x2="855" y2="215"/><line class="axis" x1="55" y1="295" x2="855" y2="295"/>
-    <path class="outerBand" d="M55 105 C250 102,480 98,855 92 L855 252 C520 258,260 262,55 265 Z"/>
-    <path class="centralBand" d="M55 145 C250 143,480 138,855 132 L855 214 C510 219,260 221,55 224 Z"/>
-    <path class="bandLine" d="M55 105 C250 102,480 98,855 92"/><path class="bandLine" d="M55 265 C260 262,520 258,855 252"/>
-    <path class="innerLine" d="M55 145 C250 143,480 138,855 132"/><path class="innerLine" d="M55 224 C260 221,510 219,855 214"/>
-    <path class="avgline" d="M55 185 C250 183,480 179,855 173"/>
-    <path class="priceline" d="M55 220 C150 210,230 198,310 204 S470 162,555 172 S690 124,770 118 S825 103,855 106"/>
-    <text x="695" y="168" fill="#fbbf24" font-size="14">Média 21D</text>
-    <text x="748" y="99" fill="#34d399" font-size="14">Preço</text>
-  </svg>
-  <div class="status">
-    <div><span>Exemplo</span><strong class="warn">Intermediário acima</strong></div>
-    <div><span>Distância</span><strong>+2,4%</strong></div>
-    <div><span>Z-score</span><strong>+1,35</strong></div>
-    <div><span>Amostra</span><strong>252 pregões</strong></div>
-  </div>
-</section>
-
-<h2>Como as faixas são construídas</h2>
-<p>Para cada pregão diário encerrado, o indicador calcula a distância percentual do fechamento para a sua SMA configurada. Em seguida, observa essa série durante uma janela histórica — <strong>252 pregões por padrão</strong> — e deriva as zonas estatísticas.</p>
-
-<div class="grid">
-  <section class="card">
-    <div class="eyebrow">Padrão recomendado</div>
-    <h3>Percentis</h3>
-    <p><strong>P25–P75:</strong> faixa central. É a região que contém a metade central das observações históricas.</p>
-    <p><strong>P5–P95:</strong> faixa externa. Valores além desses limites ficaram fora de aproximadamente 90% das observações da amostra.</p>
-    <p class="muted">Vantagem: não exige que a distribuição tenha formato normal ou simétrico.</p>
-  </section>
-  <section class="card">
-    <div class="eyebrow">Alternativa</div>
-    <h3>Desvio-padrão</h3>
-    <p><strong>±1σ:</strong> região central em torno da média histórica da distância.</p>
-    <p><strong>±2σ:</strong> região externa usada como referência de afastamento elevado.</p>
-    <p class="muted">É útil para acompanhar z-score, mas depende mais da forma da distribuição.</p>
-  </section>
+<h2>As 12 melhorias implementadas</h2>
+<div class="feature-list">
+  <div class="feature"><strong>Percentil atual do afastamento</strong><p>O indicador posiciona a distância atual dentro da distribuição histórica. Para a distribuição filtrada por regime, o percentil atual é estimado por interpolação em uma grade confirmada de 5 em 5 pontos percentuais.</p></div>
+  <div class="feature"><strong>Normalização por ATR</strong><p>A distância também é exibida em unidades de ATR diário confirmado. Isso ajuda a comparar afastamentos em regimes de volatilidade diferentes.</p></div>
+  <div class="feature"><strong>Persistência</strong><p>O quadro informa há quanto tempo o preço permanece na zona atual e, quando aplicável, quantos pregões consecutivos permanece em extremo.</p></div>
+  <div class="feature"><strong>Assimetria acima e abaixo da média</strong><p>O painel de pesquisa separa afastamentos positivos e negativos, mostrando quantidade, média e caudas P90/P10 de cada lado.</p></div>
+  <div class="feature"><strong>Regime de volatilidade</strong><p>ATR diário dividido pela sua média classifica o mercado como volatilidade baixa, normal ou alta. Opcionalmente, as faixas passam a usar apenas observações históricas do mesmo regime.</p></div>
+  <div class="feature"><strong>Regime da média</strong><p>A inclinação da SMA classifica a referência como ascendente, lateral ou descendente. Janela e limiar de lateralidade são configuráveis.</p></div>
+  <div class="feature"><strong>O que aconteceu 1, 3 e 5 pregões depois</strong><p>Cada entrada histórica em P95/P5 é registrada. O indicador calcula o retorno mediano posterior orientado em direção à média e a taxa de retorno à faixa central.</p></div>
+  <div class="feature"><strong>Tempo até voltar à faixa central</strong><p>Para eventos que retornaram, são mostrados mediana e P75 do número de pregões necessários.</p></div>
+  <div class="feature"><strong>Excursão adicional após o extremo</strong><p>O estudo mede quanto mais o afastamento continuou aumentando antes de retornar à faixa central. Isso ajuda a evitar a falsa ideia de que P95/P5 implica reversão imediata.</p></div>
+  <div class="feature"><strong>Comparação WIN / WDO / DI / EWZ</strong><p>Uma tabela compara percentil, distância %, distância em ATR, volatilidade e direção da média dos quatro mercados em uma escala normalizada. Os símbolos podem ser alterados nas configurações.</p></div>
+  <div class="feature"><strong>Alertas confirmados no fechamento</strong><p>O usuário pode exigir <code>barstate.isconfirmed</code> para impedir que alertas intrabar sejam disparados antes do fechamento do candle atual.</p></div>
+  <div class="feature"><strong>Alertas ricos e seletivos</strong><p>Há condições independentes para cruzamento da média, entrada/saída de P95/P5, retorno à faixa central, z-score extremo e combinação de extremo com direção da média.</p></div>
 </div>
 
-<div class="callout ok"><strong>Por que os percentis são o padrão?</strong> O objetivo do Sino do Mercado é observar distribuições reais. Distâncias de preço não precisam ser normais; percentis descrevem diretamente o que ocorreu na amostra.</div>
+<h2>1. Percentil: uma leitura mais intuitiva que o z-score</h2>
+<p>Se o quadro mostra <strong>P91</strong>, o afastamento atual está aproximadamente acima de 91% das observações históricas da amostra usada. Isso é diferente de dizer que existe 91% de chance de reversão: o percentil descreve <strong>posição histórica</strong>, não probabilidade futura.</p>
+<div class="callout ok"><strong>Quando “mesmo regime” está ativo:</strong> o histórico é filtrado pela classe de volatilidade vigente, desde que haja uma quantidade mínima de observações naquele regime. Caso contrário, o indicador recua automaticamente para a amostra geral.</div>
 
-<h2>Classificação automática</h2>
+<h2>2. Distância em ATR</h2>
+<p>O mesmo afastamento nominal pode ter significados muito diferentes em mercados calmos e voláteis. Por isso o indicador calcula:</p>
+<p><code>(Preço atual − Média 21D) / ATR diário confirmado</code></p>
+<div class="grid3">
+  <div class="metric"><strong>+0,4 ATR</strong><p class="muted">Afastamento relativamente pequeno.</p></div>
+  <div class="metric"><strong>+1,0 ATR</strong><p class="muted">Preço a aproximadamente um ATR da média.</p></div>
+  <div class="metric"><strong>+2,0 ATR</strong><p class="muted">Afastamento grande em relação à volatilidade recente.</p></div>
+</div>
+
+<h2>3. Regime de volatilidade</h2>
+<p>O regime é definido pela razão entre o ATR diário confirmado e sua média histórica. Os padrões iniciais são:</p>
 <div class="table-wrap card">
 <table>
-<thead><tr><th>Zona</th><th>Critério</th><th>Interpretação</th></tr></thead>
+<thead><tr><th>Regime</th><th>Regra padrão</th><th>Uso</th></tr></thead>
 <tbody>
-<tr><td><strong class="teal">Faixa central</strong></td><td>Entre os limites internos</td><td>O afastamento atual está dentro da região historicamente mais comum.</td></tr>
-<tr><td><strong class="warn">Intermediário acima</strong></td><td>Acima do limite interno, mas abaixo do externo</td><td>O preço está mais esticado que a região central, sem ainda superar o limite externo.</td></tr>
-<tr><td><strong class="warn">Intermediário abaixo</strong></td><td>Abaixo do limite interno, mas acima do externo</td><td>Afastamento negativo elevado, porém ainda dentro da faixa externa histórica.</td></tr>
-<tr><td><strong class="bad">Extremo acima</strong></td><td>Acima do limite externo</td><td>A distância atual superou a zona externa definida pela amostra.</td></tr>
-<tr><td><strong class="bad">Extremo abaixo</strong></td><td>Abaixo do limite externo</td><td>A distância negativa atual está além da zona externa.</td></tr>
+<tr><td>Baixa</td><td>ATR / média ATR &lt; 0,80</td><td>Mercado relativamente comprimido.</td></tr>
+<tr><td>Normal</td><td>0,80 a 1,20</td><td>Volatilidade próxima da referência.</td></tr>
+<tr><td>Alta</td><td>ATR / média ATR &gt; 1,20</td><td>Mercado relativamente expandido.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Os dois limiares são editáveis. Quando a comparação por regime está ligada, um afastamento em volatilidade alta deixa de ser comparado indiscriminadamente com períodos muito tranquilos.</p>
+
+<h2>4. Direção da média</h2>
+<p>A SMA 21D é classificada pela variação percentual entre seu valor confirmado atual e o valor de alguns pregões atrás. O usuário controla a janela e o limiar que define lateralidade.</p>
+<div class="grid3">
+  <div class="metric"><strong class="good">Ascendente</strong><p>A inclinação supera o limiar positivo.</p></div>
+  <div class="metric"><strong>Lateral</strong><p>A mudança permanece dentro do intervalo de tolerância.</p></div>
+  <div class="metric"><strong class="bad">Descendente</strong><p>A inclinação fica abaixo do limiar negativo.</p></div>
+</div>
+
+<h2>5. Distribuição assimétrica</h2>
+<p>Afastamentos positivos e negativos são avaliados separadamente. O painel mostra:</p>
+<ul class="steps">
+  <li>quantas observações ficaram acima e abaixo da média;</li>
+  <li>média dos afastamentos positivos e negativos;</li>
+  <li>P90 do lado positivo;</li>
+  <li>P10 do lado negativo.</li>
+</ul>
+<p>Isso permite identificar ativos cuja distribuição não é aproximadamente simétrica em torno da média.</p>
+
+<h2>6. Estudo pós-extremo</h2>
+<p>O motor registra um evento somente quando o afastamento <strong>entra</strong> acima do P95 ou abaixo do P5. Permanecer vários dias na mesma região extrema não cria um novo evento todos os dias.</p>
+<p>Para tornar os dois lados comparáveis, o “retorno rumo à média” recebe sinal positivo quando o movimento posterior ocorreu na direção da média: queda depois de extremo superior ou alta depois de extremo inferior.</p>
+
+<div class="table-wrap card">
+<table>
+<thead><tr><th>Métrica</th><th>1 pregão</th><th>3 pregões</th><th>5 pregões</th></tr></thead>
+<tbody>
+<tr><td>Retorno mediano rumo à média</td><td>calculado</td><td>calculado</td><td>calculado</td></tr>
+<tr><td>% que voltou à faixa central</td><td>calculado</td><td>calculado</td><td>calculado</td></tr>
+<tr><td>Tamanho da amostra</td><td>mostrado</td><td>mostrado</td><td>mostrado</td></tr>
 </tbody>
 </table>
 </div>
 
-<h2>O que o z-score acrescenta</h2>
-<p>O z-score não substitui os percentis. Ele oferece outra leitura: quantifica o afastamento da distância atual em unidades de desvio-padrão. Um valor de <code>+2</code>, por exemplo, significa que a distância atual está aproximadamente dois desvios acima da média histórica da distância usada na amostra.</p>
+<div class="callout"><strong>Importante:</strong> o estudo não afirma que um extremo deve reverter. A própria excursão adicional quantifica quanto o mercado historicamente continuou se afastando antes de voltar.</div>
 
-<div class="callout"><strong>Não trate “extremo” como sinal automático de reversão.</strong> Um preço pode permanecer estatisticamente afastado durante tendências fortes. As zonas devem ser usadas como contexto, não como ordem de compra ou venda.</div>
-
-<h2>Alertas disponíveis</h2>
-<ul class="steps">
-  <li>Preço cruzou acima da média 21D.</li>
-  <li>Preço cruzou abaixo da média 21D.</li>
-  <li>Preço entrou em extremo superior.</li>
-  <li>Preço entrou em extremo inferior.</li>
-</ul>
-
-<h2>Parâmetros configuráveis</h2>
+<h2>7. Tempo para retornar e excursão adicional</h2>
 <div class="grid">
-  <div class="metric"><strong>21 pregões</strong><p>Período da média diária, editável de 2 a 252 pregões.</p></div>
-  <div class="metric"><strong>252 pregões</strong><p>Tamanho da amostra estatística, editável de 30 a 1.500 pregões.</p></div>
-  <div class="metric"><strong>Modelo das faixas</strong><p>Percentis ou desvio-padrão.</p></div>
-  <div class="metric"><strong>Pregões encerrados</strong><p>Ativado por padrão para manter a referência histórica confirmada.</p></div>
-  <div class="metric"><strong>Cores e espessuras</strong><p>Preço, média e zonas têm opções visuais próprias.</p></div>
-  <div class="metric"><strong>Quadro de status</strong><p>Pode ser desligado para deixar o painel mais limpo.</p></div>
+  <div class="metric"><strong>Tempo até faixa central</strong><p>Mediana e P75 de pregões necessários para um evento voltar à região P25–P75 existente no momento de sua entrada.</p></div>
+  <div class="metric"><strong>Excursão adicional</strong><p>Mediana e P75 de quantos pontos percentuais o afastamento continuou aumentando depois da entrada em P95/P5 e antes do retorno.</p></div>
 </div>
 
-<h2>Instalação no TradingView</h2>
+<h2>8. Painel relativo WIN / WDO / DI / EWZ</h2>
+<p>O indicador possui quatro símbolos configuráveis. Os padrões são <code>BMFBOVESPA:WIN1!</code>, <code>BMFBOVESPA:WDO1!</code>, <code>BMFBOVESPA:DI11!</code> e <code>AMEX:EWZ</code>.</p>
+<div class="table-wrap card">
+<table>
+<thead><tr><th>Ativo</th><th>Percentil</th><th>Distância</th><th>ATR</th><th>Volatilidade</th><th>Média</th></tr></thead>
+<tbody>
+<tr><td>WIN</td><td>P…</td><td>…%</td><td>… ATR</td><td>Baixa/Normal/Alta</td><td>↑ / → / ↓</td></tr>
+<tr><td>WDO</td><td>P…</td><td>…%</td><td>… ATR</td><td>Baixa/Normal/Alta</td><td>↑ / → / ↓</td></tr>
+<tr><td>DI</td><td>P…</td><td>…%</td><td>… ATR</td><td>Baixa/Normal/Alta</td><td>↑ / → / ↓</td></tr>
+<tr><td>EWZ</td><td>P…</td><td>…%</td><td>… ATR</td><td>Baixa/Normal/Alta</td><td>↑ / → / ↓</td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted">Esse painel usa normalização para tornar comparáveis ativos com escalas de preço muito diferentes. Ele não significa que os quatro mercados tenham a mesma microestrutura ou horário de negociação.</p>
+
+<h2>9. Alertas</h2>
+<p>Os alertas podem ser ligados/desligados por grupo. Por padrão, existe a opção de aguardar o fechamento do candle atual.</p>
+<ul class="steps">
+  <li>Preço cruzou acima da média.</li>
+  <li>Preço cruzou abaixo da média.</li>
+  <li>Entrou acima do P95.</li>
+  <li>Entrou abaixo do P5.</li>
+  <li>Saiu da região acima do P95.</li>
+  <li>Saiu da região abaixo do P5.</li>
+  <li>Retornou à faixa central por cima.</li>
+  <li>Retornou à faixa central por baixo.</li>
+  <li>Z-score atingiu o limite absoluto configurado.</li>
+  <li>Extremo superior com média ascendente.</li>
+  <li>Extremo inferior com média descendente.</li>
+  <li>Condição composta: qualquer alerta habilitado.</li>
+</ul>
+
+<h2>10. Faixas visuais</h2>
+<p>O usuário continua podendo escolher entre dois modelos:</p>
+<div class="grid">
+  <div class="metric"><span class="pill">Padrão</span><strong>Percentis</strong><p>P25–P75 como faixa central e P5–P95 como faixa externa. Não exige distribuição normal.</p></div>
+  <div class="metric"><span class="pill">Alternativa</span><strong>Desvio-padrão</strong><p>Média histórica ±1σ como região central e ±2σ como região externa.</p></div>
+</div>
+
+<h2>11. Como instalar</h2>
 <ol class="steps">
   <li>Abra um Supergráfico no TradingView.</li>
   <li>Abra o <strong>Pine Editor</strong>.</li>
   <li>Crie um novo indicador.</li>
   <li>Apague o código de exemplo.</li>
   <li>Copie o código abaixo.</li>
-  <li>Salve e clique em <strong>Adicionar ao gráfico</strong>.</li>
+  <li>Salve como <code>Sino do Mercado — Contexto Estatístico 21D</code>.</li>
+  <li>Clique em <strong>Adicionar ao gráfico</strong>.</li>
   <li>O indicador aparecerá em uma janela independente.</li>
 </ol>
 
@@ -149,16 +186,22 @@ main{max-width:1120px;margin:auto;padding:30px 20px 70px}.top{display:flex;justi
   <pre id="pineCode">Carregando código Pine Script…</pre>
 </section>
 
-<h2>Relação com o estudo de amplitudes</h2>
-<p>O Webapp principal responde perguntas como “qual amplitude o WIN costuma percorrer entre 09:00 e 10:00?”. Este indicador complementa essa leitura com outra dimensão: <strong>quão longe o preço atual está do seu nível médio recente, e quão comum esse afastamento foi historicamente?</strong></p>
-<p>As duas análises podem ser usadas juntas. A distribuição de amplitudes ajuda a entender o tamanho típico dos movimentos; as faixas do indicador ajudam a contextualizar a localização relativa do preço.</p>
+<h2>12. Notas metodológicas</h2>
+<div class="callout ok"><strong>Histórico confirmado:</strong> as distribuições, regimes e estudos de evento são construídos com pregões diários encerrados. O preço atual é calculado fora desse contexto, no timeframe do gráfico.</div>
+<p>O percentil do ativo principal, quando usa a distribuição filtrada por regime, é estimado por interpolação entre percentis históricos de 5 em 5 pontos. Isso evita transportar grandes coleções através de <code>request.security()</code> e reduz risco de lookahead/memória.</p>
+<p>A comparação entre WIN/WDO/DI/EWZ usa o percent rank nativo do contexto diário de cada símbolo. Os símbolos são inputs e podem ser trocados por contratos individuais.</p>
+<p>A amostra estatística padrão é de 252 observações. Regimes raros podem ter menos ocorrências; por isso há um tamanho mínimo configurável e fallback automático para a distribuição geral.</p>
 
-<h2>Dados e não-repainting</h2>
-<p>As estatísticas das faixas usam dados diários confirmados. Para solicitações de timeframe superior, o Pine combina um deslocamento histórico com <code>lookahead_on</code> para trabalhar com valores já encerrados. A linha de preço, por outro lado, continua acompanhando o mercado atual.</p>
+<h2>Relação com o Webapp de amplitudes</h2>
+<p>As duas ferramentas respondem perguntas diferentes e complementares:</p>
+<div class="grid">
+  <div class="metric"><strong>Sino do Mercado</strong><p>Quanto o ativo historicamente se move dentro de determinada faixa de tempo?</p></div>
+  <div class="metric"><strong>Contexto Estatístico 21D</strong><p>Onde o preço atual está em relação à sua média, quão raro é esse afastamento e o que ocorreu historicamente depois de extremos semelhantes?</p></div>
+</div>
 
-<div class="callout"><strong>Os CSVs do Sino do Mercado não são enviados ao TradingView.</strong> O Webapp usa os arquivos para pesquisa histórica; este Pine Script recalcula tudo diretamente com o feed do ativo aberto no TradingView.</div>
+<div class="callout"><strong>Não há sinal automático de reversão.</strong> P95, P5, z-score alto, ATR elevado ou qualquer outra métrica descrevem contexto. Mercados podem permanecer extremos ou continuar expandindo.</div>
 
-<footer>Indicador educacional do projeto Sino do Mercado. Faixas estatísticas descrevem o histórico da amostra e não constituem previsão ou recomendação de investimento.</footer>
+<footer>Indicador educacional do projeto Sino do Mercado. Estatísticas históricas dependem da amostra e não constituem previsão nem recomendação de investimento.</footer>
 </main>
 <script>
 (async()=>{
