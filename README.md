@@ -65,48 +65,54 @@ O Webapp possui um painel para comparar até quatro intervalos do pregão simult
 
 Cada faixa é configurável. O painel desenha curvas de densidade empírica suavizada (KDE) e apresenta, lado a lado, amostra, média, mediana, P75, P95 e maior amplitude. Assim é possível visualizar em quais horários o ativo historicamente tende a expandir mais.
 
-## Indicador TradingView — Preço x Média 21D + Faixas Estatísticas
+## Indicador TradingView — Contexto Estatístico 21D
 
-O projeto inclui um indicador em Pine Script v6 para uso diretamente no TradingView.
+O projeto inclui um indicador em Pine Script v6 que abre em uma **janela independente do gráfico de preço**.
 
-Ele abre em uma **janela independente do gráfico de preço** e mantém as duas referências originais:
+A base continua sendo a comparação entre **preço atual** e **SMA dos últimos 21 pregões**, mas a versão atual acrescenta uma camada de contexto estatístico.
 
-- **Média 21D:** SMA dos últimos 21 pregões diários; por padrão, usa apenas pregões já encerrados;
-- **Preço atual:** acompanha o preço corrente e muda de cor conforme esteja acima ou abaixo da média.
+### Recursos implementados
 
-A versão atual também mede a **distância percentual do preço para a média** e compara essa distância com sua própria distribuição histórica, usando uma amostra padrão de **252 pregões**.
+- percentil atual do afastamento do preço para a média;
+- distância normalizada em ATR diário;
+- persistência na zona atual e persistência diária em extremos;
+- estatísticas separadas para afastamentos acima e abaixo da média;
+- regime de volatilidade (baixa, normal ou alta);
+- opção de comparar o preço apenas com observações históricas do mesmo regime de volatilidade;
+- direção da SMA (ascendente, lateral ou descendente);
+- estudo dos eventos históricos de entrada em P95/P5;
+- retorno mediano em direção à média após 1, 3 e 5 pregões;
+- porcentagem de eventos que retornaram à faixa central em 1, 3 e 5 pregões;
+- mediana e P75 do tempo necessário para voltar à faixa central;
+- mediana e P75 da excursão adicional depois da entrada em extremo;
+- painel comparativo normalizado de WIN, WDO, DI e EWZ;
+- alertas seletivos com opção de exigir fechamento do candle.
 
 ### Faixas estatísticas
 
-O usuário pode escolher dois modelos:
+O usuário pode escolher:
 
 - **Percentis (padrão):** P25–P75 como faixa central e P5–P95 como faixa externa;
-- **Desvio-padrão:** média histórica da distância ±1σ como faixa central e ±2σ como faixa externa.
+- **Desvio-padrão:** média histórica da distância ±1σ e ±2σ.
 
-O indicador classifica automaticamente a posição atual como:
+O indicador não interpreta P95/P5 como ordens automáticas de venda/compra. Os extremos são registrados como **eventos de pesquisa**, permitindo medir tanto reversão quanto continuidade.
 
-- faixa central;
-- intermediário acima;
-- intermediário abaixo;
-- extremo acima;
-- extremo abaixo.
+### Comparação entre ativos
 
-Também apresenta o **z-score** da distância atual e um quadro com preço, média, distância percentual, z-score, zona e tamanho da amostra.
+Os símbolos padrão são:
 
-### Alertas
+- `BMFBOVESPA:WIN1!`;
+- `BMFBOVESPA:WDO1!`;
+- `BMFBOVESPA:DI11!`;
+- `AMEX:EWZ`.
 
-Há condições de alerta para:
-
-- cruzamento acima da média;
-- cruzamento abaixo da média;
-- entrada em extremo superior;
-- entrada em extremo inferior.
+Todos podem ser alterados nas configurações do indicador.
 
 Página explicativa: https://pablopcdossantos2-sys.github.io/variacoes-graficos/indicador-media-21d.html
 
 Código Pine: `tradingview-preco-media-21d.pine`
 
-> O Pine Script não importa os CSVs locais do Webapp. Ele recalcula o conceito diretamente com os dados disponíveis no TradingView para o símbolo aberto. Os CSVs permanecem destinados às análises históricas do Sino do Mercado.
+> O Pine Script não importa os CSVs locais do Webapp. As análises históricas de amplitude continuam sendo feitas pelo Webapp; o indicador usa os dados disponíveis no TradingView para o símbolo aberto e para os símbolos do painel comparativo.
 
 
 ## Estatísticas apresentadas
