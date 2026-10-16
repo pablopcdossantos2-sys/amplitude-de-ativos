@@ -525,27 +525,27 @@ color zoneColor = upperExtremeNow or lowerExtremeNow ? color.red :
      upperIntermediate or lowerIntermediate ? color.yellow :
      inCentral ? color.teal : color.gray
 
-// Persistência no estado atual, em barras do gráfico.
-// Em gráfico diário, equivale a pregões; em intradiário, é persistência intraday.
-var string lastZone = ""
-var int zoneBars = 0
-if zoneText == lastZone
-    zoneBars += 1
-else
-    zoneBars := 1
-    lastZone := zoneText
+// Persistência em pregões na mesma zona estatística.
+// No primeiro candle de um novo pregão, classificamos o fechamento do pregão
+// anterior contra os limites então disponíveis. O dia corrente é incorporado
+// à leitura de persistência usando sua zona live.
+f_zoneCode(float dist, float p05, float p25, float p75, float p95) =>
+    int code = 99
+    if not na(dist) and not na(p05) and not na(p25) and not na(p75) and not na(p95)
+        code := dist > p95 ? 2 : dist > p75 ? 1 : dist < p05 ? -2 : dist < p25 ? -1 : 0
+    code
 
-// Persistência diária da condição extrema, independente do timeframe do gráfico.
-// No primeiro candle de um novo pregão, classificamos o último candle do
-// pregão anterior contra os limites que estavam disponíveis naquele momento.
-var int extremeDays = 0
-var int prevDailyExtremeState = 0
+int liveZoneCode = f_zoneCode(currentDistancePct, histP05, histP25, histP75, histP95)
+var int previousDailyZoneCode = 99
+var int completedZoneDays = 0
 bool newCalendarDay = ta.change(time("1D")) != 0
+
 if newCalendarDay
-    int stateNow = not na(currentDistancePct[1]) and not na(histP95[1]) and currentDistancePct[1] > histP95[1] ? 1 :
-         not na(currentDistancePct[1]) and not na(histP05[1]) and currentDistancePct[1] < histP05[1] ? -1 : 0
-    extremeDays := stateNow != 0 and stateNow == prevDailyExtremeState ? extremeDays + 1 : stateNow != 0 ? 1 : 0
-    prevDailyExtremeState := stateNow
+    int priorZoneCode = f_zoneCode(currentDistancePct[1], histP05[1], histP25[1], histP75[1], histP95[1])
+    completedZoneDays := priorZoneCode != 99 and priorZoneCode == previousDailyZoneCode ? completedZoneDays + 1 : priorZoneCode != 99 ? 1 : 0
+    previousDailyZoneCode := priorZoneCode
+
+int zonePersistenceDays = liveZoneCode != 99 and liveZoneCode == previousDailyZoneCode ? completedZoneDays + 1 : liveZoneCode != 99 ? 1 : 0
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 7. PLOTS
@@ -600,7 +600,7 @@ if barstate.islast
         table.cell(mainTable, 1, 9, f_trendText(currentTrendCode) + " (" + f_fmt(currentSlopePct, "#.##") + "%)")
 
         table.cell(mainTable, 0, 10, "Persistência")
-        table.cell(mainTable, 1, 10, (extremeDays > 0 ? str.tostring(extremeDays) + " pregões extremo" : str.tostring(zoneBars) + " barras na zona"))
+        table.cell(mainTable, 1, 10, str.tostring(zonePersistenceDays) + " pregões na zona")
     else
         table.clear(mainTable, 0, 0, 1, 10)
 
@@ -722,9 +722,9 @@ exitP05 = alertGate and ta.crossover(currentDistancePct, histP05)
 returnCentralFromAbove = alertGate and ta.crossunder(currentDistancePct, histP75)
 returnCentralFromBelow = alertGate and ta.crossover(currentDistancePct, histP25)
 
-zExtreme = alertGate and not na(zScore) and math.abs(zScore) >= zAlertLevel
-upperExtremeRisingMean = alertGate and currentDistancePct > histP95 and currentTrendCode == 1
-lowerExtremeFallingMean = alertGate and currentDistancePct < histP05 and currentTrendCode == -1
+zExtreme = alertGate and ta.crossover(math.abs(zScore), zAlertLevel)
+upperExtremeRisingMean = enterP95 and currentTrendCode == 1
+lowerExtremeFallingMean = enterP05 and currentTrendCode == -1
 
 alertcondition(enableMeanCross and crossAboveMean, "Preço cruzou acima da média", "O preço cruzou acima da média diária configurada.")
 alertcondition(enableMeanCross and crossBelowMean, "Preço cruzou abaixo da média", "O preço cruzou abaixo da média diária configurada.")
