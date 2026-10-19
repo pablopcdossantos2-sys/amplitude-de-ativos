@@ -115,6 +115,20 @@ Código Pine: `tradingview-preco-media-21d.pine`
 > O Pine Script não importa os CSVs locais do Webapp. As análises históricas de amplitude continuam sendo feitas pelo Webapp; o indicador usa os dados disponíveis no TradingView para o símbolo aberto e para os símbolos do painel comparativo.
 
 
+## Integração com o Contexto de Mercado
+
+O **Sino do Mercado** ajuda a investigar como as amplitudes históricas se distribuem; o projeto [Contexto de Mercado](https://pablopcsantos.github.io/contexto-de-mercado/) ajuda a transformar observações em preparação, cenários condicionais e revisão do processo. As ferramentas são complementares e não devem ser confundidas com geradores de sinais.
+
+### Fluxo de trabalho sugerido
+
+1. Escolha o ativo, o recorte horário ou timeframe e a janela histórica.
+2. Verifique a granularidade do CSV e o tamanho da amostra antes de interpretar os resultados.
+3. Registre mediana, P75 e P95 como descrições da distribuição histórica, sem convertê-los em previsões de reversão.
+4. Na preparação pré-mercado, escreva cenários condicionais, gatilhos observáveis, invalidações e condições para não operar.
+5. Depois do pregão, compare a hipótese com o que ocorreu e revise o processo, sem avaliar a qualidade da leitura apenas pelo resultado financeiro.
+
+A integração atual é por navegação e metodologia: os CSVs e os dados locais de cada aplicação não são transferidos automaticamente entre projetos.
+
 ## Estatísticas apresentadas
 
 O Webapp calcula média, mediana, desvio-padrão, assimetria, curtose excedente, percentis 5%, 25%, 75% e 95%, menor e maior amplitude, tamanho da amostra e frequência histórica acima ou abaixo de um limiar escolhido.
