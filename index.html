@@ -252,6 +252,7 @@ input[type="time"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px co
         <a class="btn ghost" href="tutorial-dados.html">⇩ Dados reais</a>
         <a class="btn ghost" href="indicador-media-21d.html">⌁ Contexto estatístico</a>
         <a class="btn ghost" href="https://pablopcsantos.github.io/contexto-de-mercado/">↗ Preparação pré-mercado</a>
+        <button id="exportContextBtn" class="btn ghost" type="button">⇧ Exportar contexto</button>
         <button id="themeBtn" class="btn ghost" type="button" aria-label="Alternar tema">◐ Tema</button>
         <button id="helpBtn" class="btn ghost" type="button">? Como usar</button>
       </div>
@@ -1249,6 +1250,54 @@ input[type="time"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px co
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${state.activeAsset}_${metric}_recorte.csv`; a.click(); URL.revokeObjectURL(a.href);
   }
 
+  function exportContextSnapshot() {
+    const read = (id) => {
+      const el = $(id);
+      return el ? el.value : '';
+    };
+    const textOf = (id) => {
+      const el = $(id);
+      return el ? el.textContent.trim() : '';
+    };
+    const source = state.sources[state.activeAsset] || { type:'none', name:'Sem dados' };
+    const snapshot = {
+      schema: 'contexto-mercado-amplitude-v1',
+      exportedAt: new Date().toISOString(),
+      sourceProject: 'Sino do Mercado',
+      asset: state.activeAsset,
+      dataSource: source.name,
+      dataSourceType: source.type,
+      analysisMode: read('analysisModeSelect'),
+      metric: read('metricSelect'),
+      timeframe: read('timeframeSelect'),
+      startDate: read('startDate'),
+      endDate: read('endDate'),
+      sessionStart: read('sessionStartTime'),
+      sessionEnd: read('sessionEndTime'),
+      sampleSize: textOf('statN'),
+      mean: textOf('statMean'),
+      median: textOf('statMedian'),
+      stdDev: textOf('statStd'),
+      p05: textOf('p05'),
+      p25: textOf('p25'),
+      p75: textOf('p75'),
+      p95: textOf('p95'),
+      minimum: textOf('minAmp'),
+      maximum: textOf('maxAmp'),
+      notes: 'Estatísticas descritivas da amostra selecionada; não são previsão, recomendação nem sinal automático.'
+    };
+    if (!snapshot.sampleSize || snapshot.sampleSize === '—' || snapshot.sampleSize === '0') {
+      alert('Não há amostra estatística disponível para exportar. Importe ou selecione dados e confira o recorte.');
+      return;
+    }
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type:'application/json;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sino-do-mercado-contexto.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function saveTheme(theme) {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem('sino-theme', theme); } catch {}
@@ -1285,6 +1334,7 @@ input[type="time"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px co
 
     document.querySelectorAll('[data-compare-time]').forEach(el => el.addEventListener('input', render));
 
+    $('exportContextBtn').addEventListener('click', exportContextSnapshot);
     $('downloadCsvBtn').addEventListener('click', downloadFilteredCsv);
     $('downloadPngBtn').addEventListener('click', () => {
       if (window.Plotly && state.lastRender.values.length) Plotly.downloadImage('chart', { format:'png', filename:`${state.activeAsset}_curva_de_sino`, width:1400, height:850, scale:1.5 });
